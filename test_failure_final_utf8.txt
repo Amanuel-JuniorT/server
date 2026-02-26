@@ -1,0 +1,29 @@
+﻿PHPUnit 11.5.15 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\phpunit.xml
+
+.....F.                                                             7 / 7 (100%)
+
+Time: 00:05.272, Memory: 52.00 MB
+
+There was 1 failure:
+
+1) Tests\Feature\PoolingTest::test_driver_timeout_auto_rejects
+Failed asserting that a row in the table [poolings] matches the attributes {
+    "id": 1,
+    "status": "rejected_by_driver"
+}.
+
+Found similar results: [
+    {
+        "id": 1,
+        "status": "rejected_by_timeout"
+    }
+].
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\InteractsWithDatabase.php:36
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:342
+
+FAILURES!
+Tests: 7, Assertions: 33, Failures: 1.

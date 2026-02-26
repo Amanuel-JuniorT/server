@@ -1,0 +1,175 @@
+﻿PHPUnit 11.5.15 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\phpunit.xml
+
+...EEEE                                                             7 / 7 (100%)
+
+Time: 00:03.619, Memory: 52.00 MB
+
+There were 4 errors:
+
+1) Tests\Feature\PoolingTest::test_pool_request_rejection_by_passenger_a
+Illuminate\Database\QueryException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id (Connection: sqlite, SQL: insert into "rides" ("status", "is_pool_enabled", "passenger_accepts_pooling", "updated_at", "created_at") values (accepted, 1, 1, 2025-12-26 03:58:52, 2025-12-26 03:58:52))
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:822
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:296
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:271
+
+Caused by
+PDOException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:568
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:809
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:296
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:271
+
+2) Tests\Feature\PoolingTest::test_pool_request_rejection_by_driver
+Illuminate\Database\QueryException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id (Connection: sqlite, SQL: insert into "rides" ("status", "is_pool_enabled", "passenger_accepts_pooling", "updated_at", "created_at") values (accepted, 1, 1, 2025-12-26 03:58:52, 2025-12-26 03:58:52))
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:822
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:296
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:298
+
+Caused by
+PDOException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:568
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:809
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:296
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:298
+
+3) Tests\Feature\PoolingTest::test_driver_timeout_auto_rejects
+Illuminate\Database\QueryException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id (Connection: sqlite, SQL: insert into "rides" ("status", "is_pool_enabled", "passenger_accepts_pooling", "updated_at", "created_at") values (accepted, 1, 1, 2025-12-26 03:58:52, 2025-12-26 03:58:52))
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:822
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:296
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:325
+
+Caused by
+PDOException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:568
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:809
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:296
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:325
+
+4) Tests\Feature\PoolingTest::test_cancellation_of_pool_request_by_passenger_b
+Illuminate\Database\QueryException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id (Connection: sqlite, SQL: insert into "rides" ("updated_at", "created_at") values (2025-12-26 03:58:52, 2025-12-26 03:58:52))
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:822
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:349
+
+Caused by
+PDOException: SQLSTATE[23000]: Integrity constraint violation: 19 NOT NULL constraint failed: rides.passenger_id
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:568
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:809
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:776
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:557
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Connection.php:521
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Processors\Processor.php:32
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php:3785
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php:2205
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1408
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1373
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php:1212
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:351
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Collections\Traits\EnumeratesValues.php:271
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:346
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Factories\Factory.php:302
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:349
+
+ERRORS!
+Tests: 7, Assertions: 24, Errors: 4.

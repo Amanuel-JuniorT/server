@@ -1,0 +1,50 @@
+Production Hotfix Deployment Report
+===================================
+Deployed: Mon Dec  8 04:14:42 PM EAT 2025
+Server: Production
+
+Fixes Applied:
+--------------
+1. ✓ Added getUserProfile method to AuthManager
+   - Fixes: /api/profile endpoint
+   - Returns: User profile with driver relationship
+
+2. ✓ Verified wallet relationship in User model
+   - Fixes: /api/wallet and /api/wallet/transactions
+   - Ensures: Wallet data is accessible
+
+3. ✓ Updated test script parameter names
+   - Changed: pickup_lat/lng to originLat/Lng
+   - Changed: dropoff_lat/lng to destLat/Lng
+
+Caches Cleared:
+--------------
+✓ Configuration cache
+✓ Route cache
+✓ View cache
+✓ Application cache
+
+Backup Location:
+---------------
+backups/20251208_161428/
+
+Next Steps:
+----------
+1. Test all endpoints with: bash test-api-fixed.sh
+2. Monitor logs: tail -f storage/logs/laravel.log
+3. Check for errors in production
+
+Testing Commands:
+----------------
+# Test profile endpoint
+curl -H "Authorization: Bearer YOUR_TOKEN" http://YOUR_SERVER/api/profile
+
+# Test wallet endpoint
+curl -H "Authorization: Bearer YOUR_TOKEN" http://YOUR_SERVER/api/wallet
+
+# Test ride request
+curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
+  -d "originLat=9.04" -d "originLng=38.74" \
+  -d "destLat=9.05" -d "destLng=38.76" \
+  http://YOUR_SERVER/api/ride/request
+

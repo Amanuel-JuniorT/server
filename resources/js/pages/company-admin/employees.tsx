@@ -1,0 +1,820 @@
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SimpleTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/app-layout';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Building2, Check, CheckCircle, Clock, Eye, RefreshCw, Trash2, Upload, User, UserPlus, X, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+
+interface CompanyEmployee {
+    id: number;
+    user: {
+        id: number;
+        name: string;
+        email: string;
+        phone: string;
+    };
+    company: {
+        id: number;
+        name: string;
+    };
+    status: 'pending' | 'approved' | 'rejected' | 'left';
+    requested_at: string;
+    approved_at?: string;
+    rejected_at?: string;
+    left_at?: string;
+    rejection_reason?: string;
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Company Dashboard',
+        href: '/company-admin/dashboard',
+    },
+    {
+        title: 'My Employees',
+        href: '/company-admin/employees',
+    },
+];
+
+export default function CompanyAdminEmployeesPage() {
+    const { employees, company, stats } = usePage<
+        SharedData & {
+            employees: CompanyEmployee[];
+            company: {
+                id: number;
+                name: string;
+                code: string;
+            };
+            stats: {
+                total_employees: number;
+                approved_employees: number;
+                pending_requests: number;
+                rejected_requests: number;
+            };
+        }
+    >().props;
+
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
+    const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
+    const [isDeleteEmployeeDialogOpen, setIsDeleteEmployeeDialogOpen] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState<CompanyEmployee | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [newEmployee, setNewEmployee] = useState({
+        phone: '',
+        name: '',
+        email: '',
+        password: '',
+    });
+    const [userExists, setUserExists] = useState<boolean | null>(null);
+    const [foundUser, setFoundUser] = useState<{
+        name: string;
+        email: string;
+        isEmployee?: boolean;
+        employeeStatus?: string;
+    } | null>(null);
+    const [isCheckingUser, setIsCheckingUser] = useState(false);
+    const [csvFile, setCsvFile] = useState<File | null>(null);
+
+    const handleApproveEmployee = async (employeeId: number) => {
+        setIsLoading(true);
+
+        try {
+            await router.post(
+                `/company-admin/employees/${employeeId}/approve`,
+                {},
+                {
+                    onSuccess: () => {
+                        toast.success('Employee request approved');
+                        router.reload();
+                    },
+                    onError: () => {
+                        toast.error('Failed to approve employee request');
+                    },
+                },
+            );
+        } catch (error) {
+            toast.error('Failed to approve employee request');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRejectEmployee = async () => {
+        if (!selectedEmployee) return;
+
+        setIsLoading(true);
+
+        try {
+            await router.post(
+                `/company-admin/employees/${selectedEmployee.id}/reject`,
+                {
+                    rejection_reason: rejectionReason,
+                },
+                {
+                    onSuccess: () => {
+                        toast.success('Employee request rejected');
+                        setIsRejectDialogOpen(false);
+                        setSelectedEmployee(null);
+                        setRejectionReason('');
+                        router.reload();
+                    },
+                    onError: () => {
+                        toast.error('Failed to reject employee request');
+                    },
+                },
+            );
+        } catch (error) {
+            toast.error('Failed to reject employee request');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const openRejectDialog = (employee: CompanyEmployee) => {
+        setSelectedEmployee(employee);
+        setRejectionReason('');
+        setIsRejectDialogOpen(true);
+    };
+
+    const checkUserExists = async (phone: string) => {
+        if (!phone) {
+            setUserExists(null);
+            setFoundUser(null);
+            return;
+        }
+
+        setIsCheckingUser(true);
+        try {
+            const url = `/api/users/check-phone?phone=${encodeURIComponent(phone)}&company_id=${company.id}`;
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                setUserExists(data.exists);
+                if (data.exists) {
+                    setFoundUser({
+                        name: data.name,
+                        email: data.email,
+                        isEmployee: data.isEmployee,
+                        employeeStatus: data.employeeStatus,
+                    });
+                } else {
+                    setFoundUser(null);
+                }
+            } else {
+                setUserExists(false);
+                setFoundUser(null);
+            }
+        } catch (error) {
+            setUserExists(false);
+            setFoundUser(null);
+        } finally {
+            setIsCheckingUser(false);
+        }
+    };
+
+    const handleAddEmployee = async () => {
+        setIsLoading(true);
+
+        try {
+            await router.post('/company-admin/employees', newEmployee, {
+                onSuccess: () => {
+                    toast.success('Employee added successfully');
+                    setIsAddEmployeeDialogOpen(false);
+                    setNewEmployee({ phone: '', name: '', email: '', password: '' });
+                    setUserExists(null);
+                    setFoundUser(null);
+                    router.reload();
+                },
+                onError: (errors) => {
+                    toast.error('Failed to add employee');
+                    console.error('Add employee errors:', errors);
+                },
+            });
+        } catch (error) {
+            toast.error('Failed to add employee');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleBulkUpload = async () => {
+        if (!csvFile) {
+            toast.error('Please select a CSV file');
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const formData = new FormData();
+            formData.append('csv_file', csvFile);
+
+            await router.post('/company-admin/employees/bulk', formData, {
+                forceFormData: true,
+                onSuccess: () => {
+                    toast.success('Bulk upload completed');
+                    setIsBulkUploadDialogOpen(false);
+                    setCsvFile(null);
+                    router.reload();
+                },
+                onError: (errors) => {
+                    toast.error('Failed to upload CSV file');
+                    console.error('Bulk upload errors:', errors);
+                },
+            });
+        } catch (error) {
+            toast.error('Failed to upload CSV file');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const openDeleteDialog = (employee: CompanyEmployee) => {
+        setSelectedEmployee(employee);
+        setIsDeleteEmployeeDialogOpen(true);
+    };
+
+    const handleDeleteEmployee = async () => {
+        if (!selectedEmployee) return;
+
+        setIsLoading(true);
+
+        try {
+            await router.delete(`/company-admin/employees/${selectedEmployee.id}`, {
+                onSuccess: () => {
+                    toast.success('Employee removed from company successfully');
+                    setIsDeleteEmployeeDialogOpen(false);
+                    setSelectedEmployee(null);
+                    router.reload();
+                },
+                onError: () => {
+                    toast.error('Failed to remove employee');
+                },
+            });
+        } catch (error) {
+            toast.error('Failed to remove employee');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'pending':
+                return (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Pending
+                    </Badge>
+                );
+            case 'approved':
+                return (
+                    <Badge variant="default" className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Approved
+                    </Badge>
+                );
+            case 'rejected':
+                return (
+                    <Badge variant="destructive" className="flex items-center gap-1">
+                        <XCircle className="h-3 w-3" />
+                        Rejected
+                    </Badge>
+                );
+            case 'left':
+                return (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        Left
+                    </Badge>
+                );
+            default:
+                return <Badge variant="outline">{status}</Badge>;
+        }
+    };
+
+    const filteredEmployees = employees.filter(
+        (employee) =>
+            employee.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            employee.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            employee.user.phone.includes(searchTerm),
+    );
+
+    const pendingEmployees = filteredEmployees.filter((emp) => emp.status === 'pending');
+
+    return (
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="My Employees" />
+
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">My Employees</h1>
+                        <p className="text-muted-foreground">Manage employees for {company.name}</p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                                setIsLoading(true);
+                                router.reload({
+                                    only: ['employees', 'stats'],
+                                    onFinish: () => setIsLoading(false),
+                                });
+                            }}
+                            disabled={isLoading}
+                        >
+                            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        </Button>
+                        <Button onClick={() => setIsAddEmployeeDialogOpen(true)} className="flex items-center gap-2">
+                            <UserPlus className="h-4 w-4" />
+                            Add Employee
+                        </Button>
+                        <Button onClick={() => setIsBulkUploadDialogOpen(true)} variant="outline" className="flex items-center gap-2">
+                            <Upload className="h-4 w-4" />
+                            Bulk Upload
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Statistics Cards */}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+                            <User className="text-muted-foreground h-4 w-4" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats?.total_employees || 0}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+                            <CheckCircle className="text-muted-foreground h-4 w-4" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats?.approved_employees || 0}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                            <Clock className="text-muted-foreground h-4 w-4" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats?.pending_requests || 0}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+                            <XCircle className="text-muted-foreground h-4 w-4" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats?.rejected_requests || 0}</div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Search */}
+                <div className="flex items-center space-x-2">
+                    <div className="relative max-w-sm flex-1">
+                        <Input placeholder="Search employees..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    </div>
+                </div>
+
+                {/* Pending Requests */}
+                {pendingEmployees.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Clock className="h-5 w-5" />
+                                Pending Approval Requests
+                            </CardTitle>
+                            <CardDescription>Employee requests waiting for your approval</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <SimpleTable>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[250px]">Employee</TableHead>
+                                        <TableHead className="w-[200px]">Company</TableHead>
+                                        <TableHead className="w-[150px]">Requested</TableHead>
+                                        <TableHead className="w-[120px]">Status</TableHead>
+                                        <TableHead className="w-[100px]">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {pendingEmployees.map((employee) => (
+                                        <TableRow key={employee.id}>
+                                            <TableCell className="w-[250px]">
+                                                <div className="space-y-1">
+                                                    <div className="text-sm font-medium">{employee.user.name}</div>
+                                                    <div className="text-muted-foreground text-xs">{employee.user.email}</div>
+                                                    <div className="text-muted-foreground text-xs">{employee.user.phone}</div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[200px]">
+                                                <div className="flex items-center gap-1">
+                                                    <Building2 className="text-muted-foreground h-4 w-4" />
+                                                    <span className="text-sm">{employee.company.name}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[150px]">
+                                                <span className="text-muted-foreground text-sm">
+                                                    {new Date(employee.requested_at).toLocaleDateString()}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="w-[150px]">{getStatusBadge(employee.status)}</TableCell>
+                                            <TableCell className="w-[100px]">
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        asChild
+                                                        className="h-8"
+                                                    >
+                                                        <Link href={`/company-admin/employees/${employee.id}`}>
+                                                            <Eye className="h-3 w-3" />
+                                                        </Link>
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleApproveEmployee(employee.id)}
+                                                        disabled={isLoading}
+                                                        className="h-8"
+                                                    >
+                                                        <Check className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        onClick={() => openRejectDialog(employee)}
+                                                        disabled={isLoading}
+                                                        className="h-8"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </SimpleTable>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* All Employees */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>All Employee Requests</CardTitle>
+                        <CardDescription>Complete list of all employee-company relationships</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <SimpleTable>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[250px]">Employee</TableHead>
+                                    <TableHead className="w-[200px]">Company</TableHead>
+                                    <TableHead className="w-[200px]">Requested</TableHead>
+                                    <TableHead className="w-[120px]">Status</TableHead>
+                                    <TableHead className="w-[150px]">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredEmployees.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
+                                            No employees found
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredEmployees.map((employee) => (
+                                        <TableRow key={employee.id}>
+                                            <TableCell className="w-[250px]">
+                                                <div className="space-y-1">
+                                                    <div className="text-sm font-medium">{employee.user.name}</div>
+                                                    <div className="text-muted-foreground text-xs">{employee.user.email}</div>
+                                                    <div className="text-muted-foreground text-xs">{employee.user.phone}</div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[200px]">
+                                                <div className="flex items-center gap-1">
+                                                    <Building2 className="text-muted-foreground h-4 w-4" />
+                                                    <span className="text-sm">{employee.company.name}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[200px]">
+                                                <div className="space-y-1">
+                                                    <div className="text-muted-foreground text-sm">
+                                                        {new Date(employee.requested_at).toLocaleDateString()}
+                                                    </div>
+                                                    {employee.approved_at && (
+                                                        <div className="text-xs text-green-600">
+                                                            Approved: {new Date(employee.approved_at).toLocaleDateString()}
+                                                        </div>
+                                                    )}
+                                                    {employee.rejected_at && (
+                                                        <div className="text-xs text-red-600">
+                                                            Rejected: {new Date(employee.rejected_at).toLocaleDateString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[150px]">{getStatusBadge(employee.status)}</TableCell>
+                                            <TableCell className="w-[150px]">
+                                                {employee.status === 'pending' && (
+                                                    <div className="flex gap-1">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => handleApproveEmployee(employee.id)}
+                                                            disabled={isLoading}
+                                                            className="h-8"
+                                                        >
+                                                            <Check className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => openRejectDialog(employee)}
+                                                            disabled={isLoading}
+                                                            className="h-8"
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        asChild
+                                                        className="h-8"
+                                                    >
+                                                        <Link href={`/company-admin/employees/${employee.id}`}>
+                                                            <Eye className="h-3 w-3" />
+                                                        </Link>
+                                                    </Button>
+                                                    {employee.status === 'approved' && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => openDeleteDialog(employee)}
+                                                            disabled={isLoading}
+                                                            className="h-8"
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                {employee.status === 'rejected' && employee.rejection_reason && (
+                                                    <div className="text-muted-foreground max-w-xs text-xs">Reason: {employee.rejection_reason}</div>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </SimpleTable>
+                    </CardContent>
+                </Card>
+
+                {/* Reject Dialog */}
+                <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Reject Employee Request</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to reject this employee request? You can provide a reason for rejection.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="rejection_reason">Rejection Reason (Optional)</Label>
+                                <Textarea
+                                    id="rejection_reason"
+                                    placeholder="Enter reason for rejection..."
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={handleRejectEmployee} disabled={isLoading}>
+                                {isLoading ? 'Rejecting...' : 'Reject Request'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Add Employee Dialog */}
+                <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add New Employee</DialogTitle>
+                            <DialogDescription>
+                                Enter the employee's phone number. If they're already registered, they'll be added directly. If not, you'll need to
+                                provide additional details to create their account.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="phone">Phone Number *</Label>
+                                <Input
+                                    id="phone"
+                                    placeholder="Enter employee phone number"
+                                    value={newEmployee.phone}
+                                    onChange={(e) => {
+                                        const phone = e.target.value;
+                                        setNewEmployee({ ...newEmployee, phone });
+                                        // Check if user exists after a short delay
+                                        setTimeout(() => checkUserExists(phone), 500);
+                                    }}
+                                    required
+                                />
+                                {isCheckingUser && <p className="text-muted-foreground text-sm">Checking if user exists...</p>}
+                                {userExists === true && foundUser && (
+                                    <>
+                                        {foundUser.isEmployee === true ? (
+                                            <div className="rounded-md bg-red-50 p-3">
+                                                <p className="text-sm font-semibold text-red-800">⚠ Already an Employee</p>
+                                                <p className="mt-1 text-xs text-red-600">
+                                                    <span className="font-semibold">{foundUser.name}</span> ({foundUser.email}) is already an employee
+                                                    of this company with status:{' '}
+                                                    <span className="font-semibold capitalize">{foundUser.employeeStatus}</span>
+                                                </p>
+                                                <p className="mt-2 text-xs text-red-700">
+                                                    You cannot add this user again. Please check the employees list or select a different phone
+                                                    number.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-md bg-green-50 p-3">
+                                                <p className="text-sm font-semibold text-green-800">✓ User Found: {foundUser.name}</p>
+                                                <p className="mt-1 text-xs text-green-600">{foundUser.email} will be added as an employee.</p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                {userExists === false && (
+                                    <div className="rounded-md bg-orange-50 p-3">
+                                        <p className="text-sm font-semibold text-orange-800">⚠ User not found</p>
+                                        <p className="mt-1 text-xs text-orange-600">
+                                            Please provide additional details below to create a new account.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {userExists === false && (
+                                <>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="name">Full Name *</Label>
+                                        <Input
+                                            id="name"
+                                            placeholder="Enter employee name"
+                                            value={newEmployee.name}
+                                            onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">Email (Optional)</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="Enter employee email (optional)"
+                                            value={newEmployee.email}
+                                            onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="password">Password *</Label>
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            placeholder="Enter temporary password"
+                                            value={newEmployee.password}
+                                            onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setIsAddEmployeeDialogOpen(false);
+                                    setNewEmployee({ phone: '', name: '', email: '', password: '' });
+                                    setUserExists(null);
+                                    setFoundUser(null);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleAddEmployee}
+                                disabled={
+                                    isLoading ||
+                                    !newEmployee.phone ||
+                                    foundUser?.isEmployee === true ||
+                                    (userExists === false && (!newEmployee.name || !newEmployee.password))
+                                }
+                            >
+                                {isLoading ? 'Adding...' : 'Add Employee'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Bulk Upload Dialog */}
+                <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Bulk Upload Employees</DialogTitle>
+                            <DialogDescription>
+                                Upload a CSV file to add multiple employees at once. The CSV should have headers: phone, name, email, password.
+                                Existing users will be added directly, new users will be created.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="csv_file">CSV File</Label>
+                                <Input id="csv_file" type="file" accept=".csv,.txt" onChange={(e) => setCsvFile(e.target.files?.[0] || null)} />
+                                <div className="flex items-center gap-2">
+                                    <p className="text-muted-foreground text-sm">CSV format: phone, name, email, password</p>
+                                    <a href="/sample-employees.csv" download className="text-sm text-blue-600 hover:underline">
+                                        Download sample CSV
+                                    </a>
+                                </div>
+                            </div>
+                            <div className="bg-muted rounded-md p-4">
+                                <h4 className="mb-2 font-medium">CSV Format Example:</h4>
+                                <pre className="text-muted-foreground text-sm">
+                                    {`phone,name,email,password
++1234567890,John Doe,john@example.com,temp123
++1234567891,Jane Smith,jane@example.com,temp456`}
+                                </pre>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsBulkUploadDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleBulkUpload} disabled={isLoading || !csvFile}>
+                                {isLoading ? 'Uploading...' : 'Upload CSV'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Delete Employee Dialog */}
+                <Dialog open={isDeleteEmployeeDialogOpen} onOpenChange={setIsDeleteEmployeeDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Remove Employee from Company</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to remove this employee from your company? This action will mark them as 'left' and they will no
+                                longer be associated with your company.
+                                {selectedEmployee && (
+                                    <div className="bg-muted mt-2 rounded-md p-3">
+                                        <p className="text-sm font-semibold">{selectedEmployee.user.name}</p>
+                                        <p className="text-muted-foreground text-xs">{selectedEmployee.user.email}</p>
+                                    </div>
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDeleteEmployeeDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={handleDeleteEmployee} disabled={isLoading}>
+                                {isLoading ? 'Removing...' : 'Remove Employee'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </AppLayout>
+    );
+}

@@ -1,0 +1,61 @@
+﻿PHPUnit 11.5.15 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\phpunit.xml
+
+E                                                                   1 / 1 (100%)
+
+Time: 00:02.636, Memory: 46.00 MB
+
+There was 1 error:
+
+1) Tests\Feature\PoolingTest::test_independent_ride_completion
+TypeError: Pusher\Pusher::__construct(): Argument #1 ($auth_key) must be of type string, null given, called in C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\app\Http\Controllers\RideController.php on line 884
+
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\pusher\pusher-php-server\src\Pusher.php:63
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\app\Http\Controllers\RideController.php:884
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\app\Http\Controllers\RideController.php:371
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\ControllerDispatcher.php:46
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Route.php:265
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Route.php:211
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Router.php:808
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:169
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Middleware\SubstituteBindings.php:50
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Auth\Middleware\Authenticate.php:63
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:126
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Router.php:807
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Router.php:786
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Router.php:750
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Routing\Router.php:739
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php:200
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:169
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php:21
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull.php:31
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php:21
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TrimStrings.php:51
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePostSize.php:27
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance.php:109
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Http\Middleware\HandleCors.php:61
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Http\Middleware\TrustProxies.php:58
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks.php:22
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePathEncoding.php:26
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:208
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php:126
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php:175
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php:144
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php:607
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php:573
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php:411
+C:\Users\Home\Documents\TAC\Project\ETHIOCAB\ECAB_App\server\tests\Feature\PoolingTest.php:248
+
+ERRORS!
+Tests: 1, Assertions: 0, Errors: 1.

@@ -1,0 +1,306 @@
+{
+  "info": {
+    "name": "ECAB App - Company Ride API",
+    "description": "Complete API collection for ECAB Company Ride feature",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+251911234567\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"phone\": \"+251911234567\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"passenger\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": ["{{base_url}}"],
+              "path": ["register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Company Rides",
+      "item": [
+        {
+          "name": "Get All Assigned Company Rides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver/company-rides",
+              "host": ["{{base_url}}"],
+              "path": ["driver", "company-rides"]
+            }
+          }
+        },
+        {
+          "name": "Get Active Company Ride",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver/company-ride/active",
+              "host": ["{{base_url}}"],
+              "path": ["driver", "company-ride", "active"]
+            }
+          }
+        },
+        {
+          "name": "Get Company Ride Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver/company-ride/:id",
+              "host": ["{{base_url}}"],
+              "path": ["driver", "company-ride", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Start Company Ride",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver/company-ride/:id/start",
+              "host": ["{{base_url}}"],
+              "path": ["driver", "company-ride", ":id", "start"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Complete Company Ride",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver/company-ride/:id/complete",
+              "host": ["{{base_url}}"],
+              "path": ["driver", "company-ride", ":id", "complete"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Company Ride",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver/company-ride/:id/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["driver", "company-ride", ":id", "cancel"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee Company Rides",
+      "item": [
+        {
+          "name": "Request Company Ride",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"originLat\": 9.1450,\n  \"originLng\": 38.7610,\n  \"destLat\": 9.1500,\n  \"destLng\": 38.7700,\n  \"pickupAddress\": \"Addis Ababa, Ethiopia\",\n  \"destinationAddress\": \"Bole, Addis Ababa\",\n  \"scheduledTime\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/company-ride/request",
+              "host": ["{{base_url}}"],
+              "path": ["company-ride", "request"]
+            }
+          }
+        },
+        {
+          "name": "Get Employee Company Rides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company-rides",
+              "host": ["{{base_url}}"],
+              "path": ["company-rides"]
+            }
+          }
+        },
+        {
+          "name": "Get Active Company Ride",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company-ride/active",
+              "host": ["{{base_url}}"],
+              "path": ["company-ride", "active"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Company Ride",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/company-ride/:id/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["company-ride", ":id", "cancel"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Company Rides",
+      "item": [
+        {
+          "name": "Assign Driver to Company Ride",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"driver_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/company-ride/:id/assign-driver",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "company-ride", ":id", "assign-driver"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Company Rides",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/company-rides/pending",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "company-rides", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Get Company Ride Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/company-rides/stats",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "company-rides", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+
