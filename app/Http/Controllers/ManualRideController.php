@@ -130,7 +130,6 @@ class ManualRideController extends Controller
             'dispatched_by_admin_id' => $request->user()->id, // Track who dispatched it
         ]);
 
-        broadcast(new NewRideRequested($ride));
 
         // Calculate fare if possible (using RideController logic if accessible or duplicating)
         // For now, let's just dispatch

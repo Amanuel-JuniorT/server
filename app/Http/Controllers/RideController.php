@@ -189,7 +189,7 @@ class RideController extends Controller
                 "Ride Accepted",
                 "Driver {$driverData['driver_name']} has accepted your ride request!",
                 $driverData,
-                new RideAccepted($ride->passenger_id, $driverData),
+                new RideAccepted($ride->passenger_id, $driverData, $driver->id),
                 'Passenger'
             );
 
@@ -262,8 +262,10 @@ class RideController extends Controller
         $driver->save();
 
         // Track rejected drivers for this ride
-        $excludedDrivers = $ride->rejected_driver_ids ?? [];
-        if (!is_array($excludedDrivers)) $excludedDrivers = [];
+        $excludedDrivers = $ride->rejected_driver_ids;
+        if (!is_array($excludedDrivers)) {
+            $excludedDrivers = $excludedDrivers ? [$excludedDrivers] : [];
+        }
         if (!in_array($driver->id, $excludedDrivers)) {
             $excludedDrivers[] = $driver->id;
         }
@@ -303,8 +305,6 @@ class RideController extends Controller
             ->first();
 
         if ($nextDriver) {
-            // Send notification to the next driver
-            $this->sendRideRequestNotification($ride);
             return response()->json(['message' => 'Reassigned to another driver.'], 200);
         }
 
@@ -452,7 +452,7 @@ class RideController extends Controller
                     'completed_at' => now(),
                     'cash_payment' => true,
                     'actual_distance' => $actualDistance,
-                    'actual_duration' => $actualDuration,
+                    'actual_duration' => (int) round($actualDuration),
                     'waiting_minutes' => $waitingMinutes,
                     'calculated_fare' => $fareAmount,
                     'price' => $fareAmount,
@@ -493,7 +493,7 @@ class RideController extends Controller
                     'status' => 'pending_payment',
                     'cash_payment' => false,
                     'actual_distance' => $actualDistance,
-                    'actual_duration' => $actualDuration,
+                    'actual_duration' => (int) round($actualDuration),
                     'waiting_minutes' => $waitingMinutes,
                     'calculated_fare' => $fareAmount,
                     'price' => $fareAmount,

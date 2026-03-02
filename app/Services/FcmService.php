@@ -52,4 +52,38 @@ class FcmService
             return ['successes' => 0, 'failures' => count($tokens)];
         }
     }
+
+    /**
+     * Send a silent data-only FCM message (no visible notification).
+     * Used for background wake-up (e.g. live driver location updates).
+     * Android treats this as a high-priority data message that wakes the app
+     * even in Doze mode, without showing a notification to the user.
+     */
+    public function sendSilentData(array $tokens, array $data): array
+    {
+        if (empty($tokens)) {
+            return ['successes' => 0, 'failures' => 0];
+        }
+
+        Log::debug("FCM silent data push to " . count($tokens) . " tokens. Type: " . ($data['type'] ?? 'unknown'));
+
+        try {
+            $message = CloudMessage::new()
+                ->withData($data)
+                ->withAndroidConfig([
+                    'priority' => 'high',
+                    // No 'notification' key = data-only, no visible notification
+                ]);
+
+            $report = $this->messaging->sendMulticast($message, $tokens);
+
+            return [
+                'successes' => $report->successes()->count(),
+                'failures' => $report->failures()->count(),
+            ];
+        } catch (\Throwable $e) {
+            Log::error("FCM Silent Exception: " . $e->getMessage());
+            return ['successes' => 0, 'failures' => count($tokens)];
+        }
+    }
 }

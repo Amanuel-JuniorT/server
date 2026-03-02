@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Events\DriverLocationChange;
+use App\Models\Ride;
 use App\Models\Driver;
 use App\Models\Vehicle;
 use App\Models\Rating;
+use App\Services\UnifiedNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,9 @@ use App\Events\GlobalAdminNotification;
 
 class DriverProfileController extends Controller
 {
+    public function __construct(
+        private readonly UnifiedNotificationService $notificationService
+    ) {}
 
     //     public function submit(Request $request)
     // {
@@ -267,6 +272,25 @@ class DriverProfileController extends Controller
             } catch (\Exception $broadcastException) {
                 // Log broadcast error but don't fail the request
                 Log::warning('Failed to broadcast location update: ' . $broadcastException->getMessage());
+            }
+
+            // Silent FCM fallback for when the passenger app is backgrounded.
+            // Only send during an active ride to respect FCM rate limits.
+            try {
+                $activeRide = Ride::where('driver_id', $driver->id)
+                    ->whereIn('status', ['accepted', 'arrived', 'in_progress'])
+                    ->first();
+
+                if ($activeRide) {
+                    $this->notificationService->sendLocationUpdate($activeRide->passenger_id, [
+                        'driver_id'        => $driver->id,
+                        'latitude'         => $request->latitude,
+                        'longitude'        => $request->longitude,
+                        'encoded_polyline' => $request->encoded_polyline ?? '',
+                    ]);
+                }
+            } catch (\Exception $fcmException) {
+                Log::warning('Silent FCM location fallback failed: ' . $fcmException->getMessage());
             }
 
             return $response;

@@ -19,15 +19,17 @@ class RideAccepted implements ShouldBroadcastNow
 
     protected $assigned_driver_data;
     protected $passenger_id;
+    protected $driver_id;
 
 
     /**
      * Create a new event instance.
      */
-    public function __construct($passenger_id, $assigned_driver_data)
+    public function __construct($passenger_id, $assigned_driver_data, $driver_id = null)
     {
         $this->assigned_driver_data = $assigned_driver_data;
         $this->passenger_id = $passenger_id;
+        $this->driver_id = $driver_id;
     }
 
     /**
@@ -52,13 +54,14 @@ class RideAccepted implements ShouldBroadcastNow
     public function broadcastWith()
     {
         return [
-            'driverName' => $this->assigned_driver_data['driver_name'],
-            'driverPhone' => $this->assigned_driver_data['driver_phone'],
+            'driver_id'     => $this->driver_id,
+            'driverName'    => $this->assigned_driver_data['driver_name'],
+            'driverPhone'   => $this->assigned_driver_data['driver_phone'],
             'driverProfile' => $this->assigned_driver_data['driver_profile'],
-            'vehicleMake' => $this->assigned_driver_data['vehicle_make'],
-            'vehicleModel' => $this->assigned_driver_data['vehicle_model'],
-            'plateNumber' => $this->assigned_driver_data['plate_number'],
-            'vehicleColor' => $this->assigned_driver_data['vehicle_color']
+            'vehicleMake'   => $this->assigned_driver_data['vehicle_make'],
+            'vehicleModel'  => $this->assigned_driver_data['vehicle_model'],
+            'plateNumber'   => $this->assigned_driver_data['plate_number'],
+            'vehicleColor'  => $this->assigned_driver_data['vehicle_color']
         ];
     }
 }

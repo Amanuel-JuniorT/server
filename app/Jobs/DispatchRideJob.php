@@ -16,6 +16,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Events\RideAccepted;
 
 class DispatchRideJob implements ShouldQueue
 {
@@ -40,7 +41,8 @@ class DispatchRideJob implements ShouldQueue
      */
     public function __construct(
         protected Ride $ride,
-        protected int $radiusIndex = 0
+        protected int $radiusIndex = 0,
+        protected array $notifiedDriverIds = []
     ) {}
 
     /**
@@ -48,18 +50,14 @@ class DispatchRideJob implements ShouldQueue
      */
     public function handle(UnifiedNotificationService $notificationService): void
     {
-        $this->ride->refresh();
-        if (!in_array($this->ride->status, ['requested', 'searching'])) {
-            Log::info("DispatchRideJob aborted: Ride {$this->ride->id} is in status '{$this->ride->status}'");
-            return;
-        }
-
         $radii = [5, 10, 20, 50]; // progressive radii in km
 
-        // If we have exhausted all radii, it's time to stop
-        if ($this->radiusIndex >= count($radii)) {
-            Log::info("DispatchRideJob FINISHED: Ride: {$this->ride->id}, No driver found after max radius");
-            $this->noDriverFound($notificationService);
+        // If we have exhausted all radii OR if the ride is no longer searching, it's time to stop
+        if ($this->radiusIndex >= count($radii) || !in_array($this->ride->status, ['requested', 'searching'])) {
+            if ($this->radiusIndex >= count($radii) && in_array($this->ride->status, ['requested', 'searching'])) {
+                Log::info("DispatchRideJob FINISHED: Ride: {$this->ride->id}, No driver found after max radius");
+                $this->noDriverFound($notificationService);
+            }
             return;
         }
 
@@ -81,79 +79,109 @@ class DispatchRideJob implements ShouldQueue
 
         Log::info("DispatchRideJob SEARCHING: Ride: {$this->ride->id}, Radius: {$currentRadius}km, MinBalance: {$min_balance}, VehicleType: {$this->ride->vehicle_type_id}");
 
-        $results = DB::select("
-                SELECT drivers.*, locations.latitude, locations.longitude,
-                    (6371 * acos(cos(radians(?)) * cos(radians(locations.latitude)) * 
-                    cos(radians(locations.longitude) - radians(?)) + sin(radians(?)) * 
-                    sin(radians(locations.latitude)))) AS distance
-                FROM drivers
-                INNER JOIN locations ON drivers.id = locations.driver_id
-                INNER JOIN vehicles ON drivers.id = vehicles.driver_id
-                INNER JOIN wallets ON drivers.user_id = wallets.user_id
-                WHERE drivers.status = 'available'
-                    AND drivers.approval_state = 'approved'
-                    AND vehicles.vehicle_type_id = ?
-                    AND wallets.balance >= ?
-                    AND (6371 * acos(cos(radians(?)) * cos(radians(locations.latitude)) * 
-                        cos(radians(locations.longitude) - radians(?)) + sin(radians(?)) * 
-                        sin(radians(locations.latitude)))) <= ?
-                ORDER BY distance ASC
-                LIMIT 50
-            ", [
-            $this->ride->origin_lat,
-            $this->ride->origin_lng,
-            $this->ride->origin_lat,
-            $this->ride->vehicle_type_id,
-            $min_balance,
-            $this->ride->origin_lat,
-            $this->ride->origin_lng,
-            $this->ride->origin_lat,
-            $currentRadius
-        ]);
+        $excludedDrivers = array_merge(
+            $this->ride->rejected_driver_ids ?: [],
+            $this->notifiedDriverIds
+        );
+        if ($this->ride->notified_driver_id) {
+            $excludedDrivers[] = $this->ride->notified_driver_id;
+        }
+        $excludedDrivers = array_filter(array_unique($excludedDrivers));
+
+        $query = Driver::select('drivers.*', 'locations.latitude', 'locations.longitude')
+            ->join('locations', 'drivers.id', '=', 'locations.driver_id')
+            ->join('vehicles', 'drivers.id', '=', 'vehicles.driver_id')
+            ->join('wallets', 'drivers.user_id', '=', 'wallets.user_id')
+            ->where('drivers.status', 'available')
+            ->where('drivers.approval_state', 'approved')
+            ->where('vehicles.vehicle_type_id', $this->ride->vehicle_type_id)
+            ->where('wallets.balance', '>=', $min_balance);
+
+        if (!empty($excludedDrivers)) {
+            $query->whereNotIn('drivers.id', $excludedDrivers);
+        }
+
+        $results = $query->selectRaw("
+                (6371 * acos(cos(radians(?)) * cos(radians(locations.latitude)) * 
+                cos(radians(locations.longitude) - radians(?)) + sin(radians(?)) * 
+                sin(radians(locations.latitude)))) AS distance
+            ", [$this->ride->origin_lat, $this->ride->origin_lng, $this->ride->origin_lat])
+            ->whereRaw("
+                (6371 * acos(cos(radians(?)) * cos(radians(locations.latitude)) * 
+                cos(radians(locations.longitude) - radians(?)) + sin(radians(?)) * 
+                sin(radians(locations.latitude)))) <= ?
+            ", [$this->ride->origin_lat, $this->ride->origin_lng, $this->ride->origin_lat, $currentRadius])
+            ->orderBy('distance', 'asc')
+            ->limit(1)
+            ->get();
 
         Log::info("DispatchRideJob SQL RESULT COUNT: " . count($results));
 
         if (!empty($results)) {
-            $validDriverUserIds = [];
-            $nearestDriverId = null;
+            $nearestDriverId = $results[0]->id;
 
-            foreach ($results as $result) {
-                if ($this->ride->rejected_driver_ids && in_array($result->id, $this->ride->rejected_driver_ids)) {
-                    Log::info("DispatchRideJob: Driver {$result->id} rejected previously, skipping.");
-                    continue;
-                }
 
-                $driverWallet = Wallet::where('user_id', $result->user_id)->first();
-                if ($driverWallet && $driverWallet->balance >= $min_balance) {
-                    $validDriverUserIds[] = $result->user_id;
-                    if ($nearestDriverId === null) {
-                        $nearestDriverId = $result->id;
-                    }
-                }
-            }
+            // if ($this->ride->rejected_driver_ids && in_array($results[0]->id, $this->ride->rejected_driver_ids)) {
+            //     Log::info("DispatchRideJob: Driver {$results[0]->id} rejected previously, skipping.");
+            // }
 
-            Log::info("DispatchRideJob VALID DRIVERS COUNT: " . count($validDriverUserIds));
 
-            if (!empty($validDriverUserIds)) {
-                $this->notifyDrivers($validDriverUserIds, $notificationService);
 
-                // Track the primary notified driver for Admin visibility
-                $this->ride->update([
-                    'notified_driver_id' => $nearestDriverId,
-                    'notified_drivers_count' => count($validDriverUserIds)
-                ]);
-                broadcast(new RideStatusChanged($this->ride));
+            // $driverWallet = Wallet::where('user_id', $results[0]->user_id)->first();
+            // if ($driverWallet && $driverWallet->balance >= $min_balance) {
+            //     $validDriverUserIds[] = $results[0]->user_id;
+            //     if ($nearestDriverId === null) {
+            //         $nearestDriverId = $results[0]->id;
+            //     }
+            // }
 
-                $found = true;
-            }
+
+            Log::info("DispatchRideJob VALID DRIVERS IDs: " . $nearestDriverId);
+
+            // if (!empty($validDriverUserIds)) {
+            //     $this->notifyDrivers($validDriverUserIds, $notificationService);
+
+            //     // Track the primary notified driver for Admin visibility
+            //     $this->ride->update([
+            //         'notified_driver_id' => $nearestDriverId,
+            //         'notified_drivers_count' => count($validDriverUserIds)
+            //     ]);
+            //     broadcast(new RideStatusChanged($this->ride));
+
+            //     $found = true;
+            // }
+
+
+            // Track the notified driver
+            $this->ride->update([
+                'notified_driver_id' => $nearestDriverId,
+                'notified_drivers_count' => 1
+            ]);
+
+            // Load relationships needed for the broadcast payload
+            $this->ride->refresh();
+            $this->ride->load('passenger');
+
+            // Broadcast the ride request to the driver via WebSocket
+            broadcast(new NewRideRequested($this->ride));
+            Log::info("DispatchRideJob: Broadcast sent to driver {$nearestDriverId} for Ride {$this->ride->id}.");
+
+            // Add current driver to our tracking list
+            $this->notifiedDriverIds[] = $nearestDriverId;
+
+            // Instead of blocking sleep(20), we dispatch the NEXT check with a delay.
+            // This makes the job non-blocking for the queue worker.
+            Log::info("DispatchRideJob: Re-dispatching acceptance check in 20s. Notified: " . implode(',', $this->notifiedDriverIds));
+            self::dispatch($this->ride, $this->radiusIndex, $this->notifiedDriverIds)->delay(now()->addSeconds(20));
+            return;
         }
 
-        // Schedule the next heartbeat/expansion
+        // If no driver found in current radius, expand to next radius after a short delay
         $nextIndex = $this->radiusIndex + 1;
-        $delay = $found ? 25 : 10; // If someone was notified, wait longer for them to respond
+        $delay = 5;
 
-        Log::info("DispatchRideJob NEXT: Ride: {$this->ride->id}, Found: " . ($found ? "Yes" : "No") . ", NextIndex: {$nextIndex} in {$delay}s");
-        self::dispatch($this->ride, $nextIndex)->delay(now()->addSeconds($delay));
+        Log::info("DispatchRideJob NEXT: Ride: {$this->ride->id}, No driver in {$currentRadius}km. NextIndex: {$nextIndex} in {$delay}s");
+        self::dispatch($this->ride, $nextIndex, $this->notifiedDriverIds)->delay(now()->addSeconds($delay));
     }
 
     /**
@@ -164,6 +192,9 @@ class DispatchRideJob implements ShouldQueue
         $this->ride->refresh();
 
         // Notify all valid drivers
+
+        broadcast(new NewRideRequested($this->ride));
+
         $notificationService->notifyUsers(
             $driverUserIds,
             "New Ride Request",
@@ -173,7 +204,7 @@ class DispatchRideJob implements ShouldQueue
                 'pickup_address' => $this->ride->pickup_address,
                 'fare' => $this->ride->price
             ],
-            new NewRideRequested($this->ride),
+            null,
             'Driver'
         );
 
