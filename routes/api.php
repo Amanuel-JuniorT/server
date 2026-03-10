@@ -47,11 +47,11 @@ Route::middleware('auth:sanctum')->post('/driver/submit-details', [DriverProfile
 Route::get('/app/bootstrap', [App\Http\Controllers\BootstrapController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    
+
     Route::get('/driver/approval_status', [AuthManager::class, 'getDriverApprovalStatus']);
     Route::post('/logout', [AuthManager::class, 'logout']);
     Route::get('/profile', [AuthManager::class, 'getUserProfile']);
-    
+
     // FCM Token Management
     Route::post('/fcm/register', [FcmTokenController::class, 'register']);
     Route::post('/fcm/unregister', [FcmTokenController::class, 'unregister']);
@@ -96,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ride/{id}/cancel', [RideController::class, 'cancelRide']);
     Route::post('/ride/{id}/rate', [RideController::class, 'rate']);
     Route::post('/ride/{id}/pay', [RideController::class, 'payUpfront']);
+    Route::post('/ride/{id}/retry', [RideController::class, 'retryRide']);
     Route::get('/driver/{driverId}/rating-stats', [RideController::class, 'getDriverRatingStats']);
 
     // Favorite Locations

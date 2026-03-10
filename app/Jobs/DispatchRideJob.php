@@ -101,7 +101,7 @@ class DispatchRideJob implements ShouldQueue
             $query->whereNotIn('drivers.id', $excludedDrivers);
         }
 
-        $results = $query->selectRaw("
+        $nearbyDriver = $query->selectRaw("
                 (6371 * acos(cos(radians(?)) * cos(radians(locations.latitude)) * 
                 cos(radians(locations.longitude) - radians(?)) + sin(radians(?)) * 
                 sin(radians(locations.latitude)))) AS distance
@@ -113,13 +113,13 @@ class DispatchRideJob implements ShouldQueue
             ", [$this->ride->origin_lat, $this->ride->origin_lng, $this->ride->origin_lat, $currentRadius])
             ->orderBy('distance', 'asc')
             ->limit(1)
-            ->get();
+            ->first();
 
-        Log::info("DispatchRideJob SQL RESULT COUNT: " . count($results));
 
-        if (!empty($results)) {
-            $nearestDriverId = $results[0]->id;
+        if (!empty($nearbyDriver)) {
+            $nearestDriverId = $nearbyDriver->id;
 
+            Log::info("DispatchRideJob SQL RESULT FOUND: " . $nearbyDriver);
 
             // if ($this->ride->rejected_driver_ids && in_array($results[0]->id, $this->ride->rejected_driver_ids)) {
             //     Log::info("DispatchRideJob: Driver {$results[0]->id} rejected previously, skipping.");

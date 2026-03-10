@@ -221,7 +221,7 @@ class RideController extends Controller
 
             // Check if ride is available for retry (requested, searching, or cancelled from a previous failed search)
             $ride = Ride::where('id', $id)
-                ->whereIn('status', ['requested', 'searching', 'cancelled'])
+                ->whereIn('status', ['requested', 'searching', 'cancelled', 'no_driver_found'])
                 ->first();
 
             if (!$ride) return response()->json(['message' => 'Ride not available for retry'], 404);
