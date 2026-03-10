@@ -99,7 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ride/{id}/retry', [RideController::class, 'retryRide']);
     Route::get('/driver/{driverId}/rating-stats', [RideController::class, 'getDriverRatingStats']);
 
-    // Favorite Locations
+    // //Favorite Locations
     Route::get('/favorites', [FavoriteLocationController::class, 'index']);
     Route::post('/favorites/sync', [FavoriteLocationController::class, 'sync']);
 
