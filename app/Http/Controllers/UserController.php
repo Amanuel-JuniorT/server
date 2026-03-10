@@ -29,7 +29,7 @@ class UserController extends Controller
         $imagePath = null;
 
         if ($request->hasFile('profile_image')) {
-            $imagePath = $request->file('profile_image')->store('profile_images', 'public');
+            $imagePath = $request->file('profile_image')->store('profile_images');
         }
 
         $user = User::create([
@@ -50,7 +50,7 @@ class UserController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role,
-                'profile_image_url' => $user->profile_image ? asset('storage/' . $user->profile_image) : null,
+                'profile_image_url' => $user->profile_image ? Storage::url($user->profile_image) : null,
             ]
         ], 201);
     }
@@ -70,7 +70,7 @@ class UserController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role,
-            'profile_image_url' => $user->profile_image ? asset('storage/' . $user->profile_image) : null,
+            'profile_image_url' => $user->profile_image ? Storage::url($user->profile_image) : null,
         ]);
     }
 }

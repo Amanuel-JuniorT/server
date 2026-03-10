@@ -22,8 +22,8 @@ class CorporateJobsSeeder extends Seeder
 
         $corporateJobs = [
             [
-                'passenger_id' => 1, // Assuming passenger ID 1 exists, or seed a dummy passenger
-                'driver_id' => null, // Available for pickup
+                'passenger_id' => 1,
+                'driver_id' => null,
                 'pickup_address' => 'Bole International Airport, Addis Ababa',
                 'destination_address' => 'Hilton Hotel, Addis Ababa',
                 'origin_lat' => 8.977468,
@@ -32,10 +32,8 @@ class CorporateJobsSeeder extends Seeder
                 'destination_lng' => 38.761743,
                 'status' => 'requested',
                 'price' => 450.00,
-                'distance_km' => 8.5,
-                'estimated_duration_min' => 25,
-                'payment_method' => 'corporate_billing',
-                'created_at' => Carbon::now()->subMinutes(5),
+                'cash_payment' => false,
+                'requested_at' => Carbon::now()->subMinutes(5),
             ],
             [
                 'passenger_id' => 1,
@@ -48,10 +46,8 @@ class CorporateJobsSeeder extends Seeder
                 'destination_lng' => 38.756667,
                 'status' => 'requested',
                 'price' => 300.00,
-                'distance_km' => 4.2,
-                'estimated_duration_min' => 15,
-                'payment_method' => 'corporate_billing',
-                'created_at' => Carbon::now()->subMinutes(10),
+                'cash_payment' => false,
+                'requested_at' => Carbon::now()->subMinutes(10),
             ],
              [
                 'passenger_id' => 1,
@@ -64,10 +60,8 @@ class CorporateJobsSeeder extends Seeder
                 'destination_lng' => 38.766347,
                 'status' => 'requested',
                 'price' => 220.00,
-                'distance_km' => 3.5,
-                'estimated_duration_min' => 12,
-                'payment_method' => 'corporate_billing',
-                'created_at' => Carbon::now()->subMinutes(2),
+                'cash_payment' => false,
+                'requested_at' => Carbon::now()->subMinutes(2),
             ]
         ];
 

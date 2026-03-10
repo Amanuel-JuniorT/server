@@ -1,148 +1,116 @@
 # Database Migrations Documentation
 
-Generated on: Sat Dec  6 09:16:31 AM EAT 2025
+Generated on: Tue Feb 17 11:20:29 AM EAT 2026
 
 ## Migration Summary
 
-Total Migrations: 34
+Total Migrations: 26
 
 ## Migration List
 
-### 2025_05_26_064410_create_personal_access_tokens_table.php
+### 2024_01_01_000001_create_system_tables.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_064410_create_personal_access_tokens_table.php
+- **File**: database/migrations/2024_01_01_000001_create_system_tables.php
 
-### 2025_05_26_065500_create_users_table.php
+### 2024_01_01_000002_create_companies_table.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065500_create_users_table.php
+- **File**: database/migrations/2024_01_01_000002_create_companies_table.php
 
-### 2025_05_26_065617_create_drivers_table.php
+### 2024_01_01_000003_create_users_table.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065617_create_drivers_table.php
+- **File**: database/migrations/2024_01_01_000003_create_users_table.php
 
-### 2025_05_26_065637_create_vehicles_table.php
+### 2024_01_01_000004_create_drivers_and_vehicles_tables.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065637_create_vehicles_table.php
+- **File**: database/migrations/2024_01_01_000004_create_drivers_and_vehicles_tables.php
 
-### 2025_05_26_065706_create_rides_table.php
+### 2024_01_01_000005_create_company_groups_and_members_tables.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065706_create_rides_table.php
+- **File**: database/migrations/2024_01_01_000005_create_company_groups_and_members_tables.php
 
-### 2025_05_26_065727_create_locations_table.php
+### 2024_01_01_000006_create_ride_systems_tables.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065727_create_locations_table.php
+- **File**: database/migrations/2024_01_01_000006_create_ride_systems_tables.php
 
-### 2025_05_26_065757_create_payments_table.php
+### 2024_01_01_000007_create_financial_tables.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065757_create_payments_table.php
+- **File**: database/migrations/2024_01_01_000007_create_financial_tables.php
 
-### 2025_05_26_065810_create_wallet_table.php
+### 2024_01_01_000008_create_pooling_tables.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065810_create_wallet_table.php
+- **File**: database/migrations/2024_01_01_000008_create_pooling_tables.php
 
-### 2025_05_26_065825_create_transactions_table.php
+### 2024_01_01_000009_create_support_tables.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065825_create_transactions_table.php
+- **File**: database/migrations/2024_01_01_000009_create_support_tables.php
 
-### 2025_05_26_065857_create_ratings_table.php
+### 2024_01_13_000001_update_admins_table_for_invitations.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065857_create_ratings_table.php
+- **File**: database/migrations/2024_01_13_000001_update_admins_table_for_invitations.php
 
-### 2025_05_26_065916_create_admins_table.php
+### 2024_01_13_000002_create_admin_invitations_table.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_065916_create_admins_table.php
+- **File**: database/migrations/2024_01_13_000002_create_admin_invitations_table.php
 
-### 2025_05_26_090827_create_sessions_table.php
+### 2026_01_21_120000_add_receipt_path_to_transactions.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_090827_create_sessions_table.php
+- **File**: database/migrations/2026_01_21_120000_add_receipt_path_to_transactions.php
 
-### 2025_05_26_091717_create_cache_table.php
+### 2026_01_22_125859_create_sos_alerts_table.php
 - **Class**: new
-- **File**: database/migrations/2025_05_26_091717_create_cache_table.php
+- **File**: database/migrations/2026_01_22_125859_create_sos_alerts_table.php
 
-### 2025_06_02_112037_rename_type_column_on_vehicles_table.php
+### 2026_01_22_134656_create_audit_logs_table.php
 - **Class**: new
-- **File**: database/migrations/2025_06_02_112037_rename_type_column_on_vehicles_table.php
+- **File**: database/migrations/2026_01_22_134656_create_audit_logs_table.php
 
-### 2025_06_25_083831_add_accepted_and_rejected_rides_to_drivers_table.php
+### 2026_01_22_141601_fix_audit_logs_foreign_key.php
 - **Class**: new
-- **File**: database/migrations/2025_06_25_083831_add_accepted_and_rejected_rides_to_drivers_table.php
+- **File**: database/migrations/2026_01_22_141601_fix_audit_logs_foreign_key.php
 
-### 2025_07_14_061306_add_current_driver_and_rejected_list_to_rides.php
+### 2026_01_26_100113_create_vehicle_types_table.php
 - **Class**: new
-- **File**: database/migrations/2025_07_14_061306_add_current_driver_and_rejected_list_to_rides.php
+- **File**: database/migrations/2026_01_26_100113_create_vehicle_types_table.php
 
-### 2025_07_15_064614_create_pool_rides_table.php
+### 2026_01_26_100144_add_vehicle_type_id_to_vehicles_and_rides_table.php
 - **Class**: new
-- **File**: database/migrations/2025_07_15_064614_create_pool_rides_table.php
+- **File**: database/migrations/2026_01_26_100144_add_vehicle_type_id_to_vehicles_and_rides_table.php
 
-### 2025_07_15_064918_add_pool_ride_id_to_rides_table.php
+### 2026_01_29_100029_change_vehicle_type_to_string_in_vehicles_table.php
 - **Class**: new
-- **File**: database/migrations/2025_07_15_064918_add_pool_ride_id_to_rides_table.php
+- **File**: database/migrations/2026_01_29_100029_change_vehicle_type_to_string_in_vehicles_table.php
 
-### 2025_07_24_125345_create_poolings_table.php
+### 2026_01_30_165550_drop_vehicle_type_check_constraint.php
 - **Class**: new
-- **File**: database/migrations/2025_07_24_125345_create_poolings_table.php
+- **File**: database/migrations/2026_01_30_165550_drop_vehicle_type_check_constraint.php
 
-### 2025_08_20_125458_add_pickup_address_and_destination_address_to_rides_table.php
+### 2026_02_05_080244_add_fcm_token_to_users_table.php
 - **Class**: new
-- **File**: database/migrations/2025_08_20_125458_add_pickup_address_and_destination_address_to_rides_table.php
+- **File**: database/migrations/2026_02_05_080244_add_fcm_token_to_users_table.php
 
-### 2025_10_04_110813_fix_database_schema_issues.php
+### 2026_02_06_223551_finalize_rides_status_check.php
 - **Class**: new
-- **File**: database/migrations/2025_10_04_110813_fix_database_schema_issues.php
+- **File**: database/migrations/2026_02_06_223551_finalize_rides_status_check.php
 
-### 2025_10_04_110945_create_driver_locations_table.php
+### 2026_02_07_000001_update_rides_status_check.php
 - **Class**: new
-- **File**: database/migrations/2025_10_04_110945_create_driver_locations_table.php
+- **File**: database/migrations/2026_02_07_000001_update_rides_status_check.php
 
-### 2025_10_04_122709_add_location_fields_to_drivers_table.php
+### 2026_02_10_053349_add_actual_data_to_rides_table.php
 - **Class**: new
-- **File**: database/migrations/2025_10_04_122709_add_location_fields_to_drivers_table.php
+- **File**: database/migrations/2026_02_10_053349_add_actual_data_to_rides_table.php
 
-### 2025_10_04_183401_add_payment_transaction_type.php
+### 2026_02_10_054909_add_privacy_settings_to_users_table.php
 - **Class**: new
-- **File**: database/migrations/2025_10_04_183401_add_payment_transaction_type.php
+- **File**: database/migrations/2026_02_10_054909_add_privacy_settings_to_users_table.php
 
-### 2025_10_04_200757_create_driver_fcm_tokens_table.php
+### 2026_02_10_200000_create_promotions_table.php
 - **Class**: new
-- **File**: database/migrations/2025_10_04_200757_create_driver_fcm_tokens_table.php
+- **File**: database/migrations/2026_02_10_200000_create_promotions_table.php
 
-### 2025_10_05_060753_add_enhanced_rating_fields_to_drivers_table.php
+### 2026_02_14_172353_add_arrived_at_to_rides_table.php
 - **Class**: new
-- **File**: database/migrations/2025_10_05_060753_add_enhanced_rating_fields_to_drivers_table.php
-
-### 2025_11_22_062019_create_companies_table.php
-- **Class**: new
-- **File**: database/migrations/2025_11_22_062019_create_companies_table.php
-
-### 2025_11_22_062024_create_employees_table.php
-- **Class**: new
-- **File**: database/migrations/2025_11_22_062024_create_employees_table.php
-
-### 2025_11_22_062025_create_company_rides_table.php
-- **Class**: new
-- **File**: database/migrations/2025_11_22_062025_create_company_rides_table.php
-
-### 2025_11_27_143639_create_documents_table.php
-- **Class**: new
-- **File**: database/migrations/2025_11_27_143639_create_documents_table.php
-
-### 2025_11_27_144215_add_profile_fields_to_drivers_table.php
-- **Class**: new
-- **File**: database/migrations/2025_11_27_144215_add_profile_fields_to_drivers_table.php
-
-### 2025_11_27_144239_add_features_to_vehicles_table.php
-- **Class**: new
-- **File**: database/migrations/2025_11_27_144239_add_features_to_vehicles_table.php
-
-### 2025_11_29_194500_create_promotions_table.php
-- **Class**: new
-- **File**: database/migrations/2025_11_29_194500_create_promotions_table.php
-
-### 2025_12_04_153210_add_missing_columns_to_rides_table.php
-- **Class**: new
-- **File**: database/migrations/2025_12_04_153210_add_missing_columns_to_rides_table.php
+- **File**: database/migrations/2026_02_14_172353_add_arrived_at_to_rides_table.php
 
 
 ## Migration Order

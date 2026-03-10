@@ -89,11 +89,11 @@ class PassengerController extends Controller
 
             if ($request->hasFile('profile_picture')) {
                 // Delete old profile picture if it exists
-                if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
-                    Storage::disk('public')->delete($user->profile_image);
+                if ($user->profile_image && Storage::exists($user->profile_image)) {
+                    Storage::delete($user->profile_image);
                 }
 
-                $profilePicturePath = $request->file('profile_picture')->store('profile_pictures', 'public');
+                $profilePicturePath = $request->file('profile_picture')->store('profile_pictures');
                 $user->profile_image = $profilePicturePath;
             }
 
@@ -101,7 +101,7 @@ class PassengerController extends Controller
 
             $userData = $user->toArray();
             if ($user->profile_image) {
-                $userData['profile_image_url'] = asset('storage/' . $user->profile_image);
+                $userData['profile_image_url'] = Storage::url($user->profile_image);
             }
 
             return response()->json([
@@ -147,7 +147,7 @@ class PassengerController extends Controller
                 $driver = $ride->driver;
                 $driver_name = $driver && $driver->user ? $driver->user->name : 'No driver';
                 $driver_id = $driver ? $driver->id : null;
-                $driver_image = $driver && $driver->user ? $driver->user->profile_image : null;
+                $driver_image = $driver && $driver->user && $driver->user->profile_image ? Storage::url($driver->user->profile_image) : null;
 
                 $vehicle_info = $ride->vehicleType ? $ride->vehicleType->display_name : 'Standard Ride';
 

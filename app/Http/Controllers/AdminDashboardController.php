@@ -25,22 +25,25 @@ class AdminDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $stats = [
-            'passengers' => User::where('role', 'passenger')->count(),
-            'total_drivers' => User::where('role', 'driver')->count(),
-            'active_drivers' => Driver::where('approval_state', 'approved')->count(),
-            'pending_drivers' => Driver::where('approval_state', 'pending')->count(),
-            'rejected_drivers' => Driver::where('approval_state', 'rejected')->count(),
-            'vehicles' => Vehicle::count(),
-            'rides' => Ride::count(),
-            'companies' => Company::count(),
-            'active_companies' => Company::where('is_active', true)->count(),
-            'company_employees' => CompanyEmployee::where('status', 'approved')->count(),
-            'pending_company_requests' => CompanyEmployee::where('status', 'pending')->count(),
-            'total_revenue' => \App\Models\Payment::where('status', 'paid')->sum('amount'),
-            'pending_payment_receipts' => \App\Models\CompanyPaymentReceipt::where('status', 'pending')->count(),
-            'pending_wallet_topups' => \App\Models\Transaction::where('type', 'topup')->where('status', 'pending')->count(),
-        ];
+        $statsQuery = DB::selectOne("
+            SELECT 
+                (SELECT count(*) FROM users WHERE role = 'passenger') as passengers,
+                (SELECT count(*) FROM users WHERE role = 'driver') as total_drivers,
+                (SELECT count(*) FROM drivers WHERE approval_state = 'approved') as active_drivers,
+                (SELECT count(*) FROM drivers WHERE approval_state = 'pending') as pending_drivers,
+                (SELECT count(*) FROM drivers WHERE approval_state = 'rejected') as rejected_drivers,
+                (SELECT count(*) FROM vehicles) as vehicles,
+                (SELECT count(*) FROM rides) as rides,
+                (SELECT count(*) FROM companies) as companies,
+                (SELECT count(*) FROM companies WHERE is_active = true) as active_companies,
+                (SELECT count(*) FROM company_employees WHERE status = 'approved') as company_employees,
+                (SELECT count(*) FROM company_employees WHERE status = 'pending') as pending_company_requests,
+                (SELECT COALESCE(sum(amount), 0) FROM payments WHERE status = 'paid') as total_revenue,
+                (SELECT count(*) FROM company_payment_receipts WHERE status = 'pending') as pending_payment_receipts,
+                (SELECT count(*) FROM transactions WHERE type = 'topup' AND status = 'pending') as pending_wallet_topups
+        ");
+
+        $stats = (array) $statsQuery;
 
         // Rides over time (last 30 days)
         $ridesOverTime = Ride::select(DB::raw('DATE(created_at) as date'), DB::raw('count(*) as count'))
@@ -251,8 +254,8 @@ class AdminDashboardController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'license_number' => $driver->license_number,
-                'license_image_path' => asset('storage/' . $driver->license_image_path),
-                'profile_picture_path' => asset('storage/' . $driver->profile_picture_path),
+                'license_image_path' => \Storage::url($driver->license_image_path),
+                'profile_picture_path' => \Storage::url($driver->profile_picture_path),
                 'status' => $driver->status,
                 'vehicle_type' => $vehicle && $vehicle->type ? $vehicle->type->display_name : 'N/A',
                 'vehicle_details' => $vehicle ? "{$vehicle->make} {$vehicle->model} ({$vehicle->plate_number})" : 'N/A',
@@ -389,27 +392,26 @@ class AdminDashboardController extends Controller
     public function driverProfile($id)
     {
         $driver = Driver::with(['user', 'vehicle.type'])->findOrFail($id);
-        $driver->noOfRides = Ride::where('driver_id', $id)->where('status', 'completed')->count();
+        $user = $driver->user;
+        $no_of_rides = Ride::where('driver_id', $id)->where('status', 'completed')->count();
 
-        // Ensure name and phone are accessible directly if the frontend expects it
-        // and fix image paths
         $driver_data = [
             'id' => $driver->id,
             'user_id' => $driver->user_id,
-            'name' => $driver->user->name ?? 'Unknown',
-            'email' => $driver->user->email ?? 'Not provided',
-            'phone' => $driver->user->phone ?? 'Not provided',
+            'name' => $user->name ?? 'Unknown',
+            'email' => $user->email ?? 'Not provided',
+            'phone' => $user->phone ?? 'Not provided',
             'license_number' => $driver->license_number,
-            'license_image_path' => $driver->license_image_path ? asset('storage/' . $driver->license_image_path) : null,
-            'profile_picture_path' => $driver->profile_picture_path ? asset('storage/' . $driver->profile_picture_path) : null,
-            'car_picture_path' => $driver->car_picture_path ? asset('storage/' . $driver->car_picture_path) : null,
+            'license_image_path' => $driver->license_image_path ? \Storage::url($driver->license_image_path) : null,
+            'profile_picture_path' => $driver->profile_picture_path ? \Storage::url($driver->profile_picture_path) : null,
+            'car_picture_path' => $driver->car_picture_path ? \Storage::url($driver->car_picture_path) : null,
             'status' => $driver->status,
             'rating' => $driver->rating,
-            'noOfRides' => $driver->noOfRides,
+            'noOfRides' => $no_of_rides,
             'approval_state' => $driver->approval_state,
-            'reject_message' => $driver->reject_message,
-            'created_at' => $driver->created_at,
-            'updated_at' => $driver->updated_at,
+            'reject_message' => $driver->reject_message ?? "",
+            'created_at' => $driver->created_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
+            'updated_at' => $driver->updated_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
         ];
 
         return Inertia::render('driver/profile', [
@@ -590,8 +592,8 @@ class AdminDashboardController extends Controller
                 'phone' => $user->phone,
                 'noOfRides' => $noOfRides,
                 'license_number' => $driver->license_number,
-                'license_image_path' => $driver->license_image_path ? asset('storage/' . $driver->license_image_path) : null,
-                'profile_picture_path' => $driver->profile_picture_path ? asset('storage/' . $driver->profile_picture_path) : null,
+                'license_image_path' => $driver->license_image_path ? \Storage::url($driver->license_image_path) : null,
+                'profile_picture_path' => $driver->profile_picture_path ? \Storage::url($driver->profile_picture_path) : null,
                 'status' => $driver->status,
                 'vehicle_type' => ($vehicle && $vehicle->type) ? $vehicle->type->display_name : 'N/A',
                 'vehicle_details' => $vehicle ? "{$vehicle->make} {$vehicle->model} ({$vehicle->plate_number})" : 'N/A',
@@ -751,12 +753,13 @@ class AdminDashboardController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
-            'profile_picture_path' => asset('storage/' . $user->profile_image),
+            'profile_picture_path' => \Storage::url($user->profile_image),
             'created_at' => $user->created_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
             'updated_at' => $user->updated_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
         ];
         return Inertia::render('passenger/profile', ['passenger' => $passenger_data]);
     }
+
 
 
     /**

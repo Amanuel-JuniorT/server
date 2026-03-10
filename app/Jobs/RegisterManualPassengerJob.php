@@ -29,26 +29,26 @@ class RegisterManualPassengerJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // Check if user already exists (double check)
-        if (User::where('phone', $this->phone)->exists()) {
-            return;
+        // Check if user already exists
+        $user = User::where('phone', $this->phone)->first();
+
+        if (!$user) {
+            // Create the user
+            $user = User::create([
+                'name' => $this->name,
+                'phone' => $this->phone,
+                'role' => 'passenger',
+                'password' => Hash::make(Str::random(10)),
+                'status' => 'approved',
+            ]);
         }
 
-        // Create the user
-        $user = User::create([
-            'name' => $this->name,
-            'phone' => $this->phone,
-            'role' => 'passenger',
-            'password' => Hash::make(Str::random(10)),
-            'status' => 'approved',
-        ]);
-
-        // Create a wallet for the new passenger
-        Wallet::create([
-            'user_id' => $user->id,
-            'balance' => 0,
-        ]);
-
-        // Log or notify if needed
+        // Ensure a wallet exists for the passenger
+        if ($user && !Wallet::where('user_id', $user->id)->exists()) {
+            Wallet::create([
+                'user_id' => $user->id,
+                'balance' => 0,
+            ]);
+        }
     }
 }

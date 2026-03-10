@@ -32,8 +32,8 @@ class DriverApprovalController extends Controller
         }
 
         // Upload images
-        $licenseImagePath = $request->file('license_image')->store('license_images', 'public');
-        $profilePicturePath = $request->file('profile_picture')->store('profile_pictures', 'public');
+        $licenseImagePath = $request->file('license_image')->store('license_images');
+        $profilePicturePath = $request->file('profile_picture')->store('profile_pictures');
 
         // Save driver info
         $driver = Driver::create([

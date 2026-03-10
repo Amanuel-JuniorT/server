@@ -122,11 +122,7 @@ class WalletController extends Controller
 
             $receiptPath = null;
             if ($request->hasFile('receipt')) {
-                $file = $request->file('receipt');
-                // Store in 'public/receipts' folder
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $file->move(public_path('receipts'), $filename);
-                $receiptPath = 'receipts/' . $filename;
+                $receiptPath = $request->file('receipt')->store('receipts');
             }
 
             DB::beginTransaction();

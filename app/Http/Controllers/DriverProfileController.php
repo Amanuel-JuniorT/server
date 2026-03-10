@@ -23,16 +23,6 @@ class DriverProfileController extends Controller
         private readonly UnifiedNotificationService $notificationService
     ) {}
 
-    //     public function submit(Request $request)
-    // {
-    //     dd([
-    //         // 'token_user' => $request->user(),
-    //         'license_image' => $request->file('license_image'),
-    //         'profile_picture' => $request->file('profile_picture'),
-    //         'all_data' => $request->all(),
-    //     ]);
-    // }
-
     public function submit(Request $request)
     {
         Log::info('Driver detail submission request received', [
@@ -48,11 +38,7 @@ class DriverProfileController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        // dd($request->all());
-
         $existingDriver = $user->driver;
-
-        // return response()->json([ 'driver ' => $existingDriver]);
 
         $plateUniqueRule = Rule::unique('vehicles', 'plate_number');
         if ($existingDriver && $existingDriver->vehicle) {
@@ -87,8 +73,8 @@ class DriverProfileController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $licenseImagePath = $request->file('license_image')->store('license_images', 'public');
-        $profilePicturePath = $request->file('profile_picture')->store('profile_pictures', 'public');
+        $licenseImagePath = $request->file('license_image')->store('license_images');
+        $profilePicturePath = $request->file('profile_picture')->store('profile_pictures');
 
         DB::beginTransaction();
 
@@ -397,9 +383,8 @@ class DriverProfileController extends Controller
                 'emergency_contact_phone' => $driver->emergency_contact_phone,
                 'approval_state' => $driver->approval_state ?? 'pending',
                 'status' => $driver->status,
-                'profile_picture_url' => $driver->profile_picture_path ? asset('storage/' . $driver->profile_picture_path) : null,
-                'license_image_url' => $driver->license_image_path ? asset('storage/' . $driver->license_image_path) : null,
-
+                'profile_picture_url' => $driver->profile_picture_path ? \Storage::url($driver->profile_picture_path) : null,
+                'license_image_url' => $driver->license_image_path ? \Storage::url($driver->license_image_path) : null,
                 // Flattened vehicle info
                 'vehicle_make' => $vehicle->make ?? null,
                 'vehicle_model' => $vehicle->model ?? null,
@@ -615,7 +600,7 @@ class DriverProfileController extends Controller
             $file = $request->file('document');
 
             // Store the file
-            $path = $file->store('documents/' . $documentType, 'public');
+            $path = $file->store('documents/' . $documentType);
 
             // Update driver record based on document type
             if ($documentType === 'profile_picture') {
@@ -642,7 +627,7 @@ class DriverProfileController extends Controller
                     'id' => $document->id,
                     'type' => $document->document_type,
                     'status' => $document->status,
-                    'url' => asset('storage/' . $path)
+                    'url' => \Storage::url($path)
                 ]
             ]);
         } catch (\Exception $e) {
@@ -675,7 +660,7 @@ class DriverProfileController extends Controller
                         'id' => $doc->id,
                         'type' => $doc->document_type,
                         'status' => $doc->status,
-                        'url' => asset('storage/' . $doc->file_path),
+                        'url' => \Storage::url($doc->file_path),
                         'rejection_reason' => $doc->rejection_reason,
                         'uploaded_at' => $doc->uploaded_at
                     ];

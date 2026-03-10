@@ -111,10 +111,9 @@ class PilotDataSeeder extends Seeder
             CompanyEmployee::create([
                 'user_id' => $employeeUser->id,
                 'company_id' => $company->id,
-                'company_email' => $employeeUser->email,
-                'employee_id_number' => 'EMP-' . rand(1000, 9999),
-                'position' => 'Manager',
-                'status' => 'approved'
+                'status' => 'approved',
+                'requested_at' => now(),
+                'approved_at' => now(),
             ]);
 
             // Create a PENDING Corporate Ride Request (Job)

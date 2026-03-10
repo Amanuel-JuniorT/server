@@ -144,8 +144,8 @@ class ManualRideController extends Controller
     {
         $ride = Ride::findOrFail($id);
 
-        if ($ride->status === 'requested' || $ride->status === 'in_progress') {
-            return back()->with('error', 'This ride cannot be retried right now.');
+        if ($ride->status === 'requested' || $ride->status === 'searching' || $ride->status === 'in_progress') {
+            return back()->with('error', 'This ride is currently active and cannot be retried.');
         }
 
         $ride->update([

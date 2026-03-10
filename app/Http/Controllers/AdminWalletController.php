@@ -32,7 +32,7 @@ class AdminWalletController extends Controller
             'status' => $transaction->status,
             'note' => $transaction->note,
             'created_at' => $transaction->created_at,
-            'receipt_path' => $transaction->receipt_path ? asset($transaction->receipt_path) : null,
+            'receipt_path' => $transaction->receipt_path ? \Storage::url($transaction->receipt_path) : null,
             'user' => $transaction->wallet->user,
           ];
         });

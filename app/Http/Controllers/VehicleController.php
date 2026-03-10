@@ -26,7 +26,7 @@ public function store(Request $request)
 
     // Store image if exists
     if ($request->hasFile('image')) {
-        $validated['image'] = $request->file('image')->store('vehicles', 'public');
+        $validated['image'] = $request->file('image')->store('vehicles');
     }
 
     $vehicle = Vehicle::create($validated);

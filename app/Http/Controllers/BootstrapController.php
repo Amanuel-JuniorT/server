@@ -9,7 +9,7 @@ use App\Models\VehicleType;
 
 class BootstrapController extends Controller
 {
-  public function index(Request $request)
+  public function  index(Request $request)
   {
     
     $user = $request->user('sanctum');

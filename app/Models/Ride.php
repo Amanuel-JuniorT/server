@@ -11,6 +11,12 @@ class Ride extends Model
 
     protected $casts = [
         'rejected_driver_ids' => 'array',
+        'is_pool_enabled' => 'boolean',
+        'passenger_accepts_pooling' => 'boolean',
+        'is_pool_ride' => 'boolean',
+        'cash_payment' => 'boolean',
+        'prepaid' => 'boolean',
+        'is_straight_hail' => 'boolean',
     ];
 
     protected $appends = ['driver_name', 'notified_driver_name', 'notified_driver_phone'];

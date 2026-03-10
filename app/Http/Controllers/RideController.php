@@ -28,6 +28,7 @@ use App\Services\FcmService;
 use App\Events\DriverArrived;
 use App\Jobs\DispatchRideJob;
 use App\Http\Resources\VehicleTypeResource;
+use Illuminate\Support\Facades\Storage;
 
 use App\Services\UnifiedNotificationService;
 
@@ -177,7 +178,7 @@ class RideController extends Controller
             $driverData = [
                 'driver_name' => $driver->user->name ?? 'Unknown Driver',
                 'driver_phone' => $driver->user->phone ?? 'N/A',
-                'driver_profile' => $driver->user->profile_image ?? '',
+                'driver_profile' => $driver->user->profile_image ? Storage::url($driver->user->profile_image) : '',
                 'vehicle_make' => $driver->vehicle->make ?? 'Unknown',
                 'vehicle_model' => $driver->vehicle->model ?? 'Unknown',
                 'plate_number' => $driver->vehicle->plate_number ?? 'N/A',
@@ -760,16 +761,18 @@ class RideController extends Controller
         $driverBody = $isDriver ? "You have cancelled the ride." : "The passenger has cancelled the ride.";
 
         // Notify passenger
-        $this->notificationService->notifyUser(
-            $ride->passenger_id,
-            "Ride Cancelled",
-            $passengerBody,
-            ['ride_id' => $ride->id, 'cancelled_by' => $isPassenger ? 'passenger' : 'driver'],
-            new RideCancelled($ride),
-            'Passenger'
-        );
+        if ($isDriver) {
+            $this->notificationService->notifyUser(
+                $ride->passenger_id,
+                "Ride Cancelled",
+                $passengerBody,
+                ['ride_id' => $ride->id, 'cancelled_by' => $ride->cancelled_by],
+                new RideCancelled($ride),
+                'Passenger'
+            );
+        }
 
-        if ($ride->driver_id) {
+        if ($isPassenger && $ride->driver_id) {
             // Notify driver
             $this->notificationService->notifyUser(
                 $ride->driver->user_id,
@@ -1304,10 +1307,12 @@ class RideController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            if (app()->environment('testing')) {
-                dd($e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine());
-            }
-            Log::error("Ride creation failed: " . $e->getMessage());
+            Log::error("Ride creation failed: " . $e->getMessage(), [
+                'exception' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json(['message' => 'Internal server error'], 500);
         }
     }
