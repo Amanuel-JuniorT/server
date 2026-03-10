@@ -216,7 +216,7 @@ class RideController extends Controller
         try {
             $user = $request->user('sanctum');
 
-            // Check if user is authenticated
+            // /Check if user is authenticated
             if (!$user) return response()->json(['message' => 'Not authorized'], 401);
 
             // Check if ride is available for retry (requested, searching, or cancelled from a previous failed search)
