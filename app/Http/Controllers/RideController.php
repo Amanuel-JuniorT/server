@@ -273,6 +273,8 @@ class RideController extends Controller
         $ride->rejected_driver_ids = $excludedDrivers;
         $ride->save();
 
+        Log::info('Ride rejected: ' . $ride->id . ' by driver ' . $driver->id . '(' . $driver->user->name . ')');
+
         broadcast(new RideRejected($ride, $driver))->toOthers();
 
         return response()->json(['message' => 'Ride rejected.'], 200);
