@@ -33,10 +33,16 @@ class RideCancelled implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('passenger.' . $this->ride->passenger_id),
             new Channel('ride')
         ];
+
+        if ($this->ride->driver_id) {
+            $channels[] = new PrivateChannel('driver.' . $this->ride->driver_id);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs()

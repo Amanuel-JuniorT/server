@@ -734,7 +734,7 @@ class RideController extends Controller
                 "Ride Cancelled",
                 $driverBody,
                 ['ride_id' => $ride->id, 'cancelled_by' => $isPassenger ? 'passenger' : 'driver'],
-                null,
+                new RideCancelled($ride),
                 'Driver'
             );
         }

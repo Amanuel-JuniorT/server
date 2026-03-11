@@ -24,7 +24,7 @@ class NewRideRequested implements ShouldBroadcastNow
     public function broadcastOn()
     {
         $driverId = $this->ride->driver_id ?: $this->ride->notified_driver_id;
-        return new Channel('driver.' . $driverId);
+        return new PrivateChannel('driver.' . $driverId);
     }
 
     public function broadcastAs()
