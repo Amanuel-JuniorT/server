@@ -32,9 +32,12 @@ class RideRejected implements ShouldBroadcastNow
      *
      * @return array<int, \Illuminate\Broadcasting\Channel>
      */
-    public function broadcastOn(): Channel
+    public function broadcastOn()
     {
-        return new Channel('ride.' . $this->ride->id);
+        return [
+            new PrivateChannel('passenger.' . $this->ride->passenger_id),
+            new Channel('ride.' . $this->ride->id)
+        ];
     }
 
     public function broadcastAs()

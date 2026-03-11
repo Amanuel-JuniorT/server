@@ -275,56 +275,9 @@ class RideController extends Controller
 
         broadcast(new RideRejected($ride, $driver))->toOthers();
 
-        $vehicleType = $ride->vehicleType;
-        $platformCommissionRate = $vehicleType ? (floatval($vehicleType->commission_percentage) / 100) : 0.15;
-        $min_balance = floatval($ride->price) * $platformCommissionRate * 1.2;
-
-        // Try to assign to next nearest driver
-        $nextDriver = Driver::select('drivers.*')
-            ->join('locations', 'drivers.id', '=', 'locations.driver_id')
-            ->join('vehicles', 'drivers.id', '=', 'vehicles.driver_id')
-            ->join('wallets', 'drivers.user_id', '=', 'wallets.user_id')
-            ->where('drivers.status', 'available')
-            ->where('drivers.approval_state', 'approved')
-            ->where('vehicles.vehicle_type_id', $ride->vehicle_type_id)
-            ->where('wallets.balance', '>=', $min_balance)
-            ->whereNotIn('drivers.id', $excludedDrivers)
-            ->orderByRaw("
-                (
-                    6371 * acos(
-                        cos(radians(?)) *
-                        cos(radians(locations.latitude)) *
-                        cos(radians(locations.longitude) - radians(?)) +
-                        sin(radians(?)) *
-                        sin(radians(locations.latitude))
-                    )
-                ) ASC", [
-                $ride->origin_lat,
-                $ride->origin_lng,
-                $ride->origin_lat
-            ])
-            ->first();
-
-        if ($nextDriver) {
-            return response()->json(['message' => 'Reassigned to another driver.'], 200);
-        }
-
-        // No more drivers available, notify passenger
-        $ride->status = 'cancelled';
-        $ride->cancelled_at = now();
-        $ride->save();
-
-        $this->notificationService->notifyUser(
-            $ride->passenger_id,
-            "No Driver Found",
-            "Sorry, all available drivers are currently busy.",
-            ['ride_id' => $ride->id, 'status' => 'cancelled'],
-            new RideCancelled($ride),
-            'Passenger'
-        );
-
-        return response()->json(['message' => 'No more drivers available.'], 200);
+        return response()->json(['message' => 'Ride rejected.'], 200);
     }
+
 
     /**
      * Complete the ride and handle payment with business logic.

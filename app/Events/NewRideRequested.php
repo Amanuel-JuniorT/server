@@ -44,6 +44,7 @@ class NewRideRequested implements ShouldBroadcastNow
             'destination_address' => $this->ride['destination_address'],
             'fare' => $this->ride['price'],
             'passenger_name' => $this->ride->passenger->name ?? 'Passenger',
+            'passenger_phone' => $this->ride->passenger->phone ?? '',
         ];
     }
 }
