@@ -438,11 +438,17 @@ class RideController extends Controller
                 );
                 $this->sendPaymentNotification($ride, $fareAmount, 'cash');
 
-                return response()->json([
+                $responsePayload = [
                     'message' => 'Ride completed successfully',
                     'ride' => $ride,
-                    'payment_method' => 'cash'
-                ], 200);
+                    'payment_method' => 'cash',
+                    'fare_amount' => $fareAmount,
+                    'driver_earnings' => $driverEarnings,
+                    'platform_commission' => $platformCommission,
+                    'commission_rate' => $commissionRate
+                ];
+                Log::info('End Ride Response Payload: ', $responsePayload);
+                return response()->json($responsePayload, 200);
             } else {
                 // Wallet payment - Set to pending_payment
                 $ride->update([
@@ -474,7 +480,11 @@ class RideController extends Controller
                     'message' => 'Ride completed, waiting for passenger payment approval',
                     'ride' => $ride,
                     'payment_method' => 'wallet',
-                    'status' => 'pending_payment'
+                    'status' => 'pending_payment',
+                    'fare_amount' => $fareAmount,
+                    'driver_earnings' => $driverEarnings,
+                    'platform_commission' => $platformCommission,
+                    'commission_rate' => $commissionRate
                 ], 200);
             }
         } catch (\Exception $e) {

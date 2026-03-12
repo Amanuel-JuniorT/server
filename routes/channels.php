@@ -48,8 +48,11 @@ Broadcast::channel('passenger.{id}', function ($user, $id) {
     return false;
 });
 
-Broadcast::channel('driver.{id}', function ($user, $id) {
-    if ((int) $user->id === (int) $id && $user->role === 'driver') {
+// Consolidated driver channel below at line 92 (now moved up for clarity)
+Broadcast::channel('driver.{driverId}', function ($user, $driverId) {
+    // Both User (role=driver) and Driver models can authenticate.
+    // Return user info if successful (enables presence features if needed)
+    if ((int) $user->id === (int) $driverId || ($user->driver && (int) $user->driver->id === (int) $driverId)) {
         return ['id' => $user->id, 'name' => $user->name, 'role' => 'driver'];
     }
     return false;
@@ -90,6 +93,7 @@ Broadcast::channel('response', function ($user) {
 });
 
 Broadcast::channel('driver.{driverId}', function ($user, $driverId) {
+    // Both User (role=driver) and Driver models can authenticate
     return (int) $user->id === (int) $driverId || ($user->driver && (int) $user->driver->id === (int) $driverId);
 });
 

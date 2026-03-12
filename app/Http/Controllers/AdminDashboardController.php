@@ -753,7 +753,7 @@ class AdminDashboardController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
-            'profile_picture_path' => \Storage::url($user->profile_image),
+            'profile_picture_path' => $user->profile_image ? \Storage::url($user->profile_image) : null,
             'created_at' => $user->created_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
             'updated_at' => $user->updated_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
         ];
