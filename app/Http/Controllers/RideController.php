@@ -174,11 +174,13 @@ class RideController extends Controller
 
             $ride->refresh();
 
+            $driverProfile = $driver->profile_picture_path ? Storage::url($driver->profile_picture_path) : ($driver->user->profile_image ? Storage::url($driver->user->profile_image) : '');
+            
             // Prepare driver data for the event
             $driverData = [
                 'driver_name' => $driver->user->name ?? 'Unknown Driver',
                 'driver_phone' => $driver->user->phone ?? 'N/A',
-                'driver_profile' => $driver->user->profile_image ? Storage::url($driver->user->profile_image) : '',
+                'driver_profile' => $driverProfile,
                 'vehicle_make' => $driver->vehicle->make ?? 'Unknown',
                 'vehicle_model' => $driver->vehicle->model ?? 'Unknown',
                 'plate_number' => $driver->vehicle->plate_number ?? 'N/A',

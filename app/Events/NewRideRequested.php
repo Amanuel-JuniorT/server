@@ -9,6 +9,7 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 class NewRideRequested implements ShouldBroadcastNow
 {
@@ -45,6 +46,9 @@ class NewRideRequested implements ShouldBroadcastNow
             'fare' => $this->ride['price'],
             'passenger_name' => $this->ride->passenger->name ?? 'Passenger',
             'passenger_phone' => $this->ride->passenger->phone ?? '',
+            'passenger_profile' => isset($this->ride->passenger->profile_image) && $this->ride->passenger->profile_image 
+                ? Storage::url($this->ride->passenger->profile_image) 
+                : '',
         ];
     }
 }

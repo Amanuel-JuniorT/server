@@ -44,11 +44,11 @@ class RegisterManualPassengerJob implements ShouldQueue
         }
 
         // Ensure a wallet exists for the passenger
-        if ($user && !Wallet::where('user_id', $user->id)->exists()) {
-            Wallet::create([
-                'user_id' => $user->id,
-                'balance' => 0,
-            ]);
+        if ($user) {
+            Wallet::firstOrCreate(
+                ['user_id' => $user->id],
+                ['balance' => 0]
+            );
         }
     }
 }

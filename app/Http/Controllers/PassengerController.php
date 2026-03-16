@@ -147,8 +147,14 @@ class PassengerController extends Controller
                 $driver = $ride->driver;
                 $driver_name = $driver && $driver->user ? $driver->user->name : 'No driver';
                 $driver_id = $driver ? $driver->id : null;
-                $driver_image = $driver && $driver->user && $driver->user->profile_image ? Storage::url($driver->user->profile_image) : null;
-
+                $driver_image = null;
+                if ($driver) {
+                    if ($driver->profile_picture_path) {
+                        $driver_image = Storage::url($driver->profile_picture_path);
+                    } else if ($driver->user && $driver->user->profile_image) {
+                        $driver_image = Storage::url($driver->user->profile_image);
+                    }
+                }
                 $vehicle_info = $ride->vehicleType ? $ride->vehicleType->display_name : 'Standard Ride';
 
                 if ($ride->status === 'completed') {
