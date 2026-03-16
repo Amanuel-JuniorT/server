@@ -6,9 +6,9 @@ This is a Laravel-based backend API for a comprehensive ride-sharing application
 
 ## Technology Stack
 
-- **Framework**: Laravel 12.x with PHP 8.2+
+- **Framework**: Laravel 12 with PHP 8.2+
 - **Authentication**: Laravel Sanctum (API tokens)
-- **Database**: SQLite (development) / MySQL/PostgreSQL (production)
+- **Database**: Supabase /PostgreSQL
 - **Real-time**: Laravel Reverb (WebSocket broadcasting)
 - **Frontend Integration**: Inertia.js with React
 - **Testing**: Pest PHP
