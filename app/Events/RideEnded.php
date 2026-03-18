@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -51,7 +52,9 @@ class RideEnded implements ShouldBroadcastNow
         $driverName = $this->ride->driver && $this->ride->driver->user ? $this->ride->driver->user->name : 'Unknown Driver';
         $driverPhone = $this->ride->driver && $this->ride->driver->user ? $this->ride->driver->user->phone : '';
         $driverRating = $this->ride->driver ? (float)$this->ride->driver->rating : 0.0;
-        $driverProfile = $this->ride->driver ? $this->ride->driver->profile_picture_path : '';
+        $driverProfile = $this->ride->driver && $this->ride->driver->profile_picture_path 
+            ? Storage::disk('supabase')->url($this->ride->driver->profile_picture_path) 
+            : '';
 
         // Calculate duration and distance if available
         $distanceKm = (float)($this->ride->actual_distance ?? 0.0);

@@ -1006,7 +1006,7 @@ class RideController extends Controller
             $vehicleMake = $ride->driver->vehicle ? $ride->driver->vehicle->make : 'Unknown';
             $vehicleModel = $ride->driver->model ?? ($ride->driver->vehicle ? $ride->driver->vehicle->model : '');
             $vehicleColor = $ride->driver->color ?? ($ride->driver->vehicle ? $ride->driver->vehicle->color : '');
-            $driverProfile = $ride->driver->profile_picture_path ?? '';
+            $driverProfile = $ride->driver->profile_picture_path ? Storage::disk('supabase')->url($ride->driver->profile_picture_path) : '';
 
             // Snake case for backward compatibility or other uses
             $data['driver_id'] = $ride->driver->id;
