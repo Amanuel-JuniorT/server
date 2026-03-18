@@ -259,4 +259,61 @@ class EmployeeRideController extends Controller
       ], 500);
     }
   }
+
+  /**
+   * Employee opts out of a specific daily ride instance.
+   * Adds their user ID to the opted_out_employees JSON on the instance,
+   * and notifies the assigned driver (if any).
+   */
+  public function optOut(Request $request, int $instanceId)
+  {
+    try {
+      $user = $request->user('sanctum');
+
+      if (!$user) {
+        return response()->json(['success' => false, 'message' => 'User not authorized'], 403);
+      }
+
+      $instance = CompanyGroupRideInstance::whereIn('status', ['requested', 'accepted'])
+        ->where('scheduled_time', '>=', now())
+        ->findOrFail($instanceId);
+
+      if ($instance->isEmployeeOptedOut($user->id)) {
+        return response()->json(['success' => false, 'message' => 'You have already opted out of this ride'], 409);
+      }
+
+      $instance->optOut($user->id);
+
+      // Notify the driver if already assigned
+      if ($instance->driver_id) {
+        $notificationService = app(\App\Services\UnifiedNotificationService::class);
+        $driverUserId = \App\Models\Driver::find($instance->driver_id)?->user_id;
+
+        if ($driverUserId) {
+          $notificationService->notifyUser(
+            $driverUserId,
+            'Passenger Opted Out',
+            "{$user->name} will not be joining the {$instance->scheduled_time->format('H:i')} ride to {$instance->destination_address}.",
+            ['company_ride_id' => $instance->id, 'type' => 'employee_opt_out'],
+            null,
+            'Driver'
+          );
+        }
+      }
+
+      return response()->json([
+        'success' => true,
+        'message' => 'You have successfully opted out of this ride instance.',
+      ]);
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+      return response()->json(['success' => false, 'message' => 'Ride instance not found or cannot be opted out of'], 404);
+    } catch (\Exception $e) {
+      Log::error('Failed to opt out of company ride instance', [
+        'instance_id' => $instanceId,
+        'user_id'     => $request->user()?->id,
+        'error'       => $e->getMessage(),
+      ]);
+      return response()->json(['success' => false, 'message' => 'Failed to opt out'], 500);
+    }
+  }
 }

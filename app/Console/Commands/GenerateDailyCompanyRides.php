@@ -6,34 +6,21 @@ use Illuminate\Console\Command;
 
 class GenerateDailyCompanyRides extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'company:generate-rides';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Generate daily company ride records based on active assignments';
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
         $today = now()->startOfDay();
-        $dayName = strtolower($today->format('l')); // e.g. 'monday'
+        // 3-letter abbreviation, lowercase: mon, tue, wed, thu, fri, sat, sun
+        $dayAbbr = strtolower($today->format('D'));
 
-        $this->info("Generating rides for {$dayName} ({$today->toDateString()})...");
+        $this->info("Generating rides for {$dayAbbr} ({$today->toDateString()})...");
 
         $assignments = \App\Models\CompanyRideGroupAssignment::whereIn('status', ['accepted', 'active'])
             ->where('start_date', '<=', $today)
             ->where('end_date', '>=', $today)
-            ->with(['rideGroup'])
+            ->with(['rideGroup.members'])
             ->get();
 
         $count = 0;
@@ -44,17 +31,15 @@ class GenerateDailyCompanyRides extends Command
                 continue;
             }
 
-            // Check if today is a scheduled day for this assignment
-            if (!in_array($dayName, $assignment->days_of_week)) {
+            // Use the group's active_days via model helper (falls back to Mon-Fri)
+            if (!$group->isScheduledForDay($dayAbbr)) {
                 continue;
             }
 
-            // Parse scheduled time (stored as H:i:s in time column)
-            // If it's cast as datetime:H:i, use format('H:i:s')
             $timeString = $group->scheduled_time->format('H:i:s');
             $scheduledTime = \Carbon\Carbon::parse($today->toDateString() . ' ' . $timeString);
 
-            // Check if ride already exists for this group and date
+            // Avoid duplicate generation for this group today
             $exists = \App\Models\CompanyGroupRideInstance::where('ride_group_id', $group->id)
                 ->whereDate('scheduled_time', $today)
                 ->exists();
@@ -64,27 +49,51 @@ class GenerateDailyCompanyRides extends Command
                 continue;
             }
 
-            // Create the ride
-            \App\Models\CompanyGroupRideInstance::create([
-                'company_id' => $group->company_id,
-                'ride_group_id' => $group->id,
-                'driver_id' => $assignment->driver_id,
-                'origin_lat' => $group->pickup_lat,
-                'origin_lng' => $group->pickup_lng,
-                'destination_lat' => $group->destination_lat,
-                'destination_lng' => $group->destination_lng,
-                'pickup_address' => $group->pickup_address,
-                'destination_address' => $group->destination_address,
-                'scheduled_time' => $scheduledTime,
-                'status' => $assignment->driver_id ? 'accepted' : 'requested',
-                'requested_at' => now(),
-                'accepted_at' => $assignment->driver_id ? now() : null,
-            ]);
+            $members = $group->members;
+            if ($members->isEmpty()) {
+                // No members — create a single group-level instance (driver-only)
+                \App\Models\CompanyGroupRideInstance::create([
+                    'company_id'          => $group->company_id,
+                    'ride_group_id'       => $group->id,
+                    'driver_id'           => $assignment->driver_id,
+                    'origin_lat'          => $group->pickup_lat,
+                    'origin_lng'          => $group->pickup_lng,
+                    'destination_lat'     => $group->destination_lat,
+                    'destination_lng'     => $group->destination_lng,
+                    'pickup_address'      => $group->pickup_address,
+                    'destination_address' => $group->destination_address,
+                    'scheduled_time'      => $scheduledTime,
+                    'status'              => $assignment->driver_id ? 'accepted' : 'requested',
+                    'requested_at'        => now(),
+                    'accepted_at'         => $assignment->driver_id ? now() : null,
+                ]);
+                $count++;
+            } else {
+                // Create one instance per group member
+                foreach ($members as $member) {
+                    \App\Models\CompanyGroupRideInstance::create([
+                        'company_id'          => $group->company_id,
+                        'employee_id'         => $member->employee_id,
+                        'ride_group_id'       => $group->id,
+                        'driver_id'           => $assignment->driver_id,
+                        'origin_lat'          => $member->pickup_lat ?? $group->pickup_lat,
+                        'origin_lng'          => $member->pickup_lng ?? $group->pickup_lng,
+                        'destination_lat'     => $group->destination_lat,
+                        'destination_lng'     => $group->destination_lng,
+                        'pickup_address'      => $member->pickup_address ?? $group->pickup_address,
+                        'destination_address' => $group->destination_address,
+                        'scheduled_time'      => $scheduledTime,
+                        'status'              => $assignment->driver_id ? 'accepted' : 'requested',
+                        'requested_at'        => now(),
+                        'accepted_at'         => $assignment->driver_id ? now() : null,
+                    ]);
+                    $count++;
+                }
+            }
 
-            $count++;
-            $this->info("Generated ride for group: {$group->group_name} at {$timeString}");
+            $this->info("Generated ride(s) for group: {$group->group_name} at {$timeString}");
         }
 
-        $this->info("Successfully generated {$count} rides.");
+        $this->info("Successfully generated {$count} ride instance(s).");
     }
 }

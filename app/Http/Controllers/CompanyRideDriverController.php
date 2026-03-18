@@ -14,7 +14,8 @@ use App\Services\UnifiedNotificationService;
 class CompanyRideDriverController extends Controller
 {
   public function __construct(
-    private readonly UnifiedNotificationService $notificationService
+    private readonly \App\Services\UnifiedNotificationService $notificationService,
+    private readonly \App\Services\CompanyRideAssignmentService $assignmentService
   ) {}
 
   /**
@@ -371,27 +372,15 @@ class CompanyRideDriverController extends Controller
           'driver_id' => $driver->id
         ]);
 
-        // Broadcast event to notify company admin
-        broadcast(new CompanyRideDriverAssigned($ride->fresh()));
-
-        // Notify employee (Hybrid)
-        if ($ride->employee_id) {
-          $this->notificationService->notifyUser(
-            $ride->employee_id,
-            "Company Ride Cancelled",
-            "Your company ride has been cancelled by the driver.",
-            ['ride_id' => $ride->id],
-            null,
-            'Passenger'
-          );
-        }
+        // Trigger fallback to find another driver
+        $this->assignmentService->triggerFallback($ride, 'driver', 'Cancelled by driver');
 
         return response()->json([
           'success' => true,
           'data' => [
             'ride' => $ride->fresh()
           ],
-          'message' => 'Ride cancelled successfully'
+          'message' => 'Ride cancelled successfully. It has been put back into the available pool.'
         ]);
       } catch (\Exception $e) {
         DB::rollBack();

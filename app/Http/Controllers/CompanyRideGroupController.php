@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CompanyRideGroup;
 use App\Models\CompanyRideGroupAssignment;
 use App\Services\AuditService;
+use App\Services\CompanyRideEnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +13,9 @@ use Illuminate\Support\Facades\Validator;
 
 class CompanyRideGroupController extends Controller
 {
+    public function __construct(
+        private readonly CompanyRideEnrollmentService $enrollmentService
+    ) {}
     /**
      * List all ride groups for a company
      */
@@ -69,23 +73,25 @@ class CompanyRideGroupController extends Controller
     public function store(Request $request, $companyId)
     {
         $validator = Validator::make($request->all(), [
-            'group_name' => 'required|string|max:255',
-            'group_type' => 'required|in:to_office,from_office',
-            'pickup_address' => 'sometimes|nullable|string',
-            'pickup_lat' => 'sometimes|nullable|numeric',
-            'pickup_lng' => 'sometimes|nullable|numeric',
+            'group_name'          => 'required|string|max:255',
+            'group_type'          => 'required|in:to_office,from_office',
+            'pickup_address'      => 'sometimes|nullable|string',
+            'pickup_lat'          => 'sometimes|nullable|numeric',
+            'pickup_lng'          => 'sometimes|nullable|numeric',
             'destination_address' => 'sometimes|nullable|string',
-            'destination_lat' => 'sometimes|nullable|numeric',
-            'destination_lng' => 'sometimes|nullable|numeric',
-            'scheduled_time' => 'required|date_format:H:i',
-            'max_capacity' => 'nullable|integer|min:1|max:4',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'members' => 'required|array|min:1|max:4',
+            'destination_lat'     => 'sometimes|nullable|numeric',
+            'destination_lng'     => 'sometimes|nullable|numeric',
+            'scheduled_time'      => 'required|date_format:H:i',
+            'max_capacity'        => 'nullable|integer|min:1|max:4',
+            'start_date'          => 'required|date|after_or_equal:today',
+            'end_date'            => 'required|date|after_or_equal:start_date',
+            'active_days'         => 'nullable|array',
+            'active_days.*'       => 'in:mon,tue,wed,thu,fri,sat,sun',
+            'members'             => 'required|array|min:1|max:4',
             'members.*.employee_id' => 'required|exists:company_employees,id',
-            'members.*.address' => 'required|string',
-            'members.*.latitude' => 'required|numeric',
-            'members.*.longitude' => 'required|numeric',
+            'members.*.address'     => 'required|string',
+            'members.*.latitude'    => 'required|numeric',
+            'members.*.longitude'   => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -99,20 +105,21 @@ class CompanyRideGroupController extends Controller
             DB::beginTransaction();
 
             $group = CompanyRideGroup::create([
-                'company_id' => $companyId,
-                'group_name' => $request->group_name,
-                'group_type' => $request->group_type,
-                'pickup_address' => $request->pickup_address,
-                'pickup_lat' => $request->pickup_lat,
-                'pickup_lng' => $request->pickup_lng,
+                'company_id'          => $companyId,
+                'group_name'          => $request->group_name,
+                'group_type'          => $request->group_type,
+                'pickup_address'      => $request->pickup_address,
+                'pickup_lat'          => $request->pickup_lat,
+                'pickup_lng'          => $request->pickup_lng,
                 'destination_address' => $request->destination_address,
-                'destination_lat' => $request->destination_lat,
-                'destination_lng' => $request->destination_lng,
-                'scheduled_time' => $request->scheduled_time,
-                'max_capacity' => $request->max_capacity ?? 4,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
-                'status' => 'active',
+                'destination_lat'     => $request->destination_lat,
+                'destination_lng'     => $request->destination_lng,
+                'scheduled_time'      => $request->scheduled_time,
+                'max_capacity'        => $request->max_capacity ?? 4,
+                'start_date'          => $request->start_date,
+                'end_date'            => $request->end_date,
+                'active_days'         => $request->active_days, // null = default Mon-Fri
+                'status'              => 'active',
             ]);
 
             // Add members to the group
@@ -427,118 +434,95 @@ class CompanyRideGroupController extends Controller
     }
 
     /**
-     * Get available ride group assignments for driver
+     * Get open ride groups available for the authenticated driver to enroll in.
+     * Uses CompanyRideEnrollmentService which enforces contract eligibility + min rating.
      */
     public function getAvailableForDriver(Request $request)
     {
         try {
-            $user = $request->user();
+            $user   = $request->user();
             $driver = $user->driver;
 
             if (!$driver) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User is not a driver'
-                ], 403);
+                return response()->json(['success' => false, 'message' => 'User is not a driver'], 403);
             }
 
-            $assignments = CompanyRideGroupAssignment::where(function ($query) use ($driver) {
-                $query->where('driver_id', $driver->id)
-                    ->orWhereNull('driver_id');
-            })
-                ->where('status', 'pending')
-                ->where('end_date', '>=', now()->toDateString())
-                ->with(['rideGroup.members.employee', 'company'])
-                ->get();
-
-            $formatted = $assignments->map(function ($assignment) {
-                $group = $assignment->rideGroup;
-                return [
-                    'assignment_id' => $assignment->id,
-                    'ride_group_id' => $assignment->ride_group_id,
-                    'group_name' => $group->group_name ?? 'Unknown Group',
-                    'group_type' => $group->group_type ?? 'to_office',
-                    'scheduled_time' => $group->scheduled_time ? now()->format('Y-m-d') . 'T' . $group->scheduled_time->format('H:i:s') . '.000000Z' : null,
-                    'start_date' => $assignment->start_date->toDateString(),
-                    'end_date' => $assignment->end_date->toDateString(),
-                    'days_of_week' => $assignment->days_of_week,
-                    'status' => $assignment->status,
-                    'pickup_address' => $group->pickup_address,
-                    'pickup_lat' => $group->pickup_lat,
-                    'pickup_lng' => $group->pickup_lng,
-                    'destination_address' => $group->destination_address,
-                    'destination_lat' => $group->destination_lat,
-                    'destination_lng' => $group->destination_lng,
-                    'max_capacity' => $group->max_capacity,
-                    'company' => [
-                        'id' => $assignment->company->id,
-                        'name' => $assignment->company->name,
-                        'phone' => $assignment->company->phone,
-                        'address' => $assignment->company->address,
-                    ],
-                    'members' => $group->members->map(function ($member) {
-                        return [
-                            'name' => $member->employee->name ?? 'Unknown',
-                            'pickup_address' => $member->custom_pickup_address ?? $member->pickup_address,
-                            'pickup_lat' => $member->custom_pickup_lat ?? $member->pickup_lat,
-                            'pickup_lng' => $member->custom_pickup_lng ?? $member->pickup_lng,
-                        ];
-                    }),
-                ];
-            });
+            $groups = $this->enrollmentService->getOpenGroupsForDriver($driver);
 
             return response()->json([
                 'success' => true,
-                'data' => $formatted
+                'data'    => $groups,
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch available assignments'
-            ], 500);
+            Log::error('Failed to fetch available company ride groups for driver', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['success' => false, 'message' => 'Failed to fetch available assignments'], 500);
         }
     }
 
     /**
-     * Driver accepts ride group assignment
+     * Driver self-enrolls in a pending (unassigned) ride group assignment.
+     * Performs time-conflict check before accepting.
      */
     public function acceptAssignment(Request $request, $assignmentId)
     {
         try {
-            $user = $request->user();
+            $user   = $request->user();
             $driver = $user->driver;
 
             if (!$driver) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User is not a driver'
-                ], 403);
+                return response()->json(['success' => false, 'message' => 'User is not a driver'], 403);
             }
 
-            $assignment = CompanyRideGroupAssignment::where('id', $assignmentId)
-                ->where(function ($query) use ($driver) {
-                    $query->where('driver_id', $driver->id)
-                        ->orWhereNull('driver_id');
-                })
-                ->where('status', 'pending')
-                ->firstOrFail();
+            $assignment = $this->enrollmentService->enroll($driver, (int) $assignmentId);
 
-            if ($assignment->driver_id === null) {
-                $assignment->driver_id = $driver->id;
-            }
-
-            $assignment->accept();
+            AuditService::medium('Driver Enrolled in Ride Group', $assignment, "Driver ID: {$driver->id} enrolled in assignment ID: {$assignmentId}");
 
             return response()->json([
                 'success' => true,
-                'data' => $assignment->load('rideGroup.members.employee'),
-                'message' => 'Assignment accepted successfully'
+                'data'    => $assignment->load('rideGroup.members.employee'),
+                'message' => 'Successfully enrolled in ride group',
+            ]);
+        } catch (\RuntimeException $e) {
+            // Conflict or slot taken
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 409);
+        } catch (\Exception $e) {
+            Log::error('Failed to enroll driver in ride group', [
+                'assignment_id' => $assignmentId,
+                'error'         => $e->getMessage(),
+            ]);
+            return response()->json(['success' => false, 'message' => 'Failed to enroll in assignment'], 500);
+        }
+    }
+
+    /**
+     * Driver withdraws from a ride group assignment, freeing the slot.
+     */
+    public function withdrawAssignment(Request $request, $assignmentId)
+    {
+        try {
+            $user   = $request->user();
+            $driver = $user->driver;
+
+            if (!$driver) {
+                return response()->json(['success' => false, 'message' => 'User is not a driver'], 403);
+            }
+
+            $assignment = $this->enrollmentService->withdraw($driver, (int) $assignmentId);
+
+            AuditService::medium('Driver Withdrew from Ride Group', $assignment, "Driver ID: {$driver->id} withdrew from assignment ID: {$assignmentId}");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully withdrew from the ride group assignment.',
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to accept assignment'
-            ], 500);
+            Log::error('Failed to withdraw driver from ride group', [
+                'assignment_id' => $assignmentId,
+                'error'         => $e->getMessage(),
+            ]);
+            return response()->json(['success' => false, 'message' => 'Failed to withdraw from assignment'], 500);
         }
     }
 

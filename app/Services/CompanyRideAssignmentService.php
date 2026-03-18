@@ -183,4 +183,36 @@ class CompanyRideAssignmentService
       ];
     }
   }
+
+  /**
+   * Handle driver cancellation: reset ride to 'requested' with no driver,
+   * then dispatch a queued job to notify all eligible contracted drivers.
+   */
+  public function triggerFallback(CompanyGroupRideInstance $ride, string $cancelledBy = 'driver', ?string $reason = null): void
+  {
+    DB::beginTransaction();
+    try {
+      $ride->driver_id           = null;
+      $ride->status              = 'requested';
+      $ride->accepted_at         = null;
+      $ride->cancelled_by        = $cancelledBy;
+      $ride->cancellation_reason = $reason;
+      $ride->save();
+
+      DB::commit();
+
+      Log::info('Company ride fallback triggered', [
+        'ride_id'      => $ride->id,
+        'cancelled_by' => $cancelledBy,
+      ]);
+
+      \App\Jobs\NotifyDriversOfAvailableRide::dispatch($ride->fresh());
+    } catch (\Exception $e) {
+      DB::rollBack();
+      Log::error('Failed to trigger company ride fallback', [
+        'ride_id' => $ride->id,
+        'error'   => $e->getMessage(),
+      ]);
+    }
+  }
 }

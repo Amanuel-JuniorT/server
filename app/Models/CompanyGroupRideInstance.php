@@ -25,9 +25,13 @@ class CompanyGroupRideInstance extends Model
     'status',
     'assignment_retry_count',
     'requested_at',
+    'accepted_at',
     'started_at',
     'completed_at',
-    'scheduled_notification_sent'
+    'scheduled_notification_sent',
+    'opted_out_employees',
+    'cancelled_by',
+    'cancellation_reason',
   ];
 
   protected $casts = [
@@ -38,8 +42,10 @@ class CompanyGroupRideInstance extends Model
     'price' => 'decimal:2',
     'scheduled_time' => 'datetime',
     'requested_at' => 'datetime',
+    'accepted_at' => 'datetime',
     'started_at' => 'datetime',
     'completed_at' => 'datetime',
+    'opted_out_employees' => 'array',
   ];
 
   protected $appends = [
@@ -73,6 +79,27 @@ class CompanyGroupRideInstance extends Model
   public function isActive(): bool
   {
     return in_array($this->status, ['requested', 'accepted', 'in_progress']);
+  }
+
+  /**
+   * Check if a given user has opted out of this ride instance.
+   */
+  public function isEmployeeOptedOut(int $userId): bool
+  {
+    return in_array($userId, $this->opted_out_employees ?? []);
+  }
+
+  /**
+   * Add a user to the opted-out list for this instance.
+   */
+  public function optOut(int $userId): void
+  {
+    $current = $this->opted_out_employees ?? [];
+    if (!in_array($userId, $current)) {
+      $current[] = $userId;
+      $this->opted_out_employees = $current;
+      $this->save();
+    }
   }
 
   /**

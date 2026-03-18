@@ -23,6 +23,7 @@ class CompanyRideGroup extends Model
         'start_date',
         'end_date',
         'status',
+        'active_days',
     ];
 
     protected $casts = [
@@ -34,7 +35,23 @@ class CompanyRideGroup extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'max_capacity' => 'integer',
+        'active_days' => 'array',
     ];
+
+    /**
+     * Default active days when active_days is not set.
+     * Format: 3-letter lowercase abbreviations: mon, tue, wed, thu, fri, sat, sun
+     */
+    const DEFAULT_ACTIVE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
+    /**
+     * Check whether this group should run on a given day abbreviation (e.g. 'mon').
+     */
+    public function isScheduledForDay(string $dayAbbr): bool
+    {
+        $days = $this->active_days ?? self::DEFAULT_ACTIVE_DAYS;
+        return in_array(strtolower($dayAbbr), $days);
+    }
 
     public function company(): BelongsTo
     {

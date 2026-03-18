@@ -25,6 +25,7 @@ use App\Http\Controllers\PassengerController;
 use App\Http\Controllers\EmployeeRideController;
 use App\Http\Controllers\CompanyRideGroupController;
 use App\Http\Controllers\CompanyPaymentReceiptController;
+use App\Http\Controllers\CompanyAnalyticsController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\FavoriteLocationController;
@@ -234,6 +235,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/employee/cancel-link-request', [EmployeeController::class, 'cancelLinkRequest']);
     Route::get('/employee/company-rides', [EmployeeRideController::class, 'getCompanyRides']);
     Route::get('/employee/ride-groups', [EmployeeRideController::class, 'getMyRideGroups']);
+    Route::post('/employee/company-ride/{instanceId}/opt-out', [EmployeeRideController::class, 'optOut']);
+
+    // Company Analytics
+    Route::get('/company/{id}/analytics/spend', [CompanyAnalyticsController::class, 'spend']);
+    Route::get('/company/{id}/analytics/driver-performance', [CompanyAnalyticsController::class, 'driverPerformance']);
+    Route::get('/company/{id}/analytics/rides-summary', [CompanyAnalyticsController::class, 'ridesSummary']);
+    Route::get('/company/{id}/analytics/export', [CompanyAnalyticsController::class, 'export']);
 
     // Admin Company Management
     Route::get('/admin/company-employees', [AdminCompanyController::class, 'getEmployees']);
@@ -270,6 +278,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Driver Ride Group Assignments
     Route::get('/driver/ride-groups/available', [CompanyRideGroupController::class, 'getAvailableForDriver']);
     Route::post('/driver/ride-group-assignment/{assignmentId}/accept', [CompanyRideGroupController::class, 'acceptAssignment']);
+    Route::post('/driver/ride-group-assignment/{assignmentId}/withdraw', [CompanyRideGroupController::class, 'withdrawAssignment']);
     Route::get('/driver/ride-group-assignments', [CompanyRideGroupController::class, 'getDriverAssignments']);
 
     Route::post('/driver/request-data-download', [DriverProfileController::class, 'requestDataDownload']);
