@@ -40,19 +40,19 @@ Broadcast::routes(['middleware' => ['auth:sanctum']]);
 Route::post('/vehicles', [VehicleController::class, 'store']);
 Route::post('/login', [AuthManager::class, 'login']);
 Route::post('/register', [AuthManager::class, 'register']);
-Route::get('/users', [UserController::class, 'index']);
-Route::post('/users/register', [UserController::class, 'register']);
-Route::get('/users/{id}', [UserController::class, 'show']);
+// Route::get('/users', [UserController::class, 'index']);
+// Route::post('/users/register', [UserController::class, 'register']);
+// Route::get('/users/{id}', [UserController::class, 'show']);
 Route::middleware('auth:sanctum')->post('/driver/submit-details', [DriverProfileController::class, 'submit']);
 
 Route::get('/app/bootstrap', [App\Http\Controllers\BootstrapController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    
+
     Route::get('/driver/approval_status', [AuthManager::class, 'getDriverApprovalStatus']);
     Route::post('/logout', [AuthManager::class, 'logout']);
     Route::get('/profile', [AuthManager::class, 'getUserProfile']);
-    
+
     // FCM Token Management
     Route::post('/fcm/register', [FcmTokenController::class, 'register']);
     Route::post('/fcm/unregister', [FcmTokenController::class, 'unregister']);
@@ -117,56 +117,63 @@ Route::get('/test', function () {
 
 // Check if user exists by phone number
 Route::get('/users/check-phone', function (Request $request) {
-    $phone = $request->query('phone');
-    $companyId = $request->query('company_id');
 
-    if (!$phone) {
-        return response()->json(['exists' => false], 400);
-    }
 
-    $searchPhones = [];
-    $searchPhones[] = $phone;
-    $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+    // return response()->json("it works", 200);
+    try {
+        $phone = $request->query('phone');
+        $companyId = $request->query('company_id');
 
-    if (str_starts_with($cleanPhone, '251')) {
-        $localFormat = '0' . substr($cleanPhone, 3);
-        $plusFormat = '+' . $cleanPhone;
-        $searchPhones[] = $localFormat;
-        $searchPhones[] = $plusFormat;
-        $searchPhones[] = $cleanPhone;
-    } elseif (str_starts_with($cleanPhone, '09') || str_starts_with($cleanPhone, '07')) {
-        $intlFormat = '251' . substr($cleanPhone, 1);
-        $plusFormat = '+251' . substr($cleanPhone, 1);
-        $searchPhones[] = $intlFormat;
-        $searchPhones[] = $plusFormat;
-    }
-
-    $user = \App\Models\User::whereIn('phone', array_unique($searchPhones))->first();
-
-    if ($user) {
-        $response = [
-            'exists' => true,
-            'name' => $user->name,
-            'email' => $user->email,
-        ];
-
-        if ($companyId) {
-            $employee = \App\Models\CompanyEmployee::where('user_id', $user->id)
-                ->where('company_id', $companyId)
-                ->first();
-
-            if ($employee) {
-                $response['isEmployee'] = true;
-                $response['employeeStatus'] = $employee->status;
-            } else {
-                $response['isEmployee'] = false;
-            }
+        if (!$phone) {
+            return response()->json(['exists' => false], 400);
         }
 
-        return response()->json($response);
-    }
+        $searchPhones = [];
+        $searchPhones[] = $phone;
+        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
 
-    return response()->json(['exists' => false]);
+        if (str_starts_with($cleanPhone, '251')) {
+            $localFormat = '0' . substr($cleanPhone, 3);
+            $plusFormat = '+' . $cleanPhone;
+            $searchPhones[] = $localFormat;
+            $searchPhones[] = $plusFormat;
+            $searchPhones[] = $cleanPhone;
+        } elseif (str_starts_with($cleanPhone, '09') || str_starts_with($cleanPhone, '07')) {
+            $intlFormat = '251' . substr($cleanPhone, 1);
+            $plusFormat = '+251' . substr($cleanPhone, 1);
+            $searchPhones[] = $intlFormat;
+            $searchPhones[] = $plusFormat;
+        }
+
+        $user = \App\Models\User::whereIn('phone', array_unique($searchPhones))->first();
+
+        if ($user) {
+            $response = [
+                'exists' => true,
+                'name' => $user->name,
+                'email' => $user->email,
+            ];
+
+            if ($companyId) {
+                $employee = \App\Models\CompanyEmployee::where('user_id', $user->id)
+                    ->where('company_id', $companyId)
+                    ->first();
+
+                if ($employee) {
+                    $response['isEmployee'] = true;
+                    $response['employeeStatus'] = $employee->status;
+                } else {
+                    $response['isEmployee'] = false;
+                }
+            }
+
+            return response()->json($response);
+        }
+
+        return response()->json(['exists' => false]);
+    } catch (Exception $e) {
+        return response()->json(['exists' => false, 'error' => $e->getMessage()]);
+    }
 });
 
 // Authenticated Routes
