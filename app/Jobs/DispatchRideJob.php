@@ -166,6 +166,24 @@ class DispatchRideJob implements ShouldQueue
             broadcast(new NewRideRequested($this->ride));
             Log::info("DispatchRideJob: Broadcast sent to driver {$nearestDriverId} for Ride {$this->ride->id}.");
 
+            // ALSO send a high-priority FCM push notification to wake up the driver app
+            $notificationService->notifyUser(
+                $nearbyDriver->user_id,
+                "New Ride Request",
+                "A new ride request is available near you.",
+                [
+                    'type' => 'ride_request', // Helps foreground apps categorize ping
+                    'ride_id' => $this->ride->id,
+                    'pickup_address' => $this->ride->pickup_address,
+                    'destination_address' => $this->ride->destination_address,
+                    'passenger_name' => $this->ride->passenger->name ?? 'Passenger',
+                    'fare' => $this->ride->price
+                ],
+                null, // null so we don't accidentally double-broadcast websocket
+                'Driver'
+            );
+            Log::info("DispatchRideJob: FCM Push payload sent to driver {$nearestDriverId} user_id {$nearbyDriver->user_id}");
+
             // Add current driver to our tracking list
             $this->notifiedDriverIds[] = $nearestDriverId;
 

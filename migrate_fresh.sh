@@ -1,9 +1,15 @@
 #!/bin/bash
 
- php artisan migrate:fresh
+#Optimize Clearing
+php artisan optimize:clear
 
- php artisan db:seed --class=SuperAdminSeeder
+#Migrate Fresh
+php artisan migrate:fresh
 
- php artisan db:seed --class=VehicleTypeSeeder
+#Super Admin Seeder
+php artisan db:seed --class=SuperAdminSeeder
+
+#Vehicle Type Seeder
+php artisan db:seed --class=VehicleTypeSeeder
 
  

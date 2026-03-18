@@ -194,127 +194,147 @@ class PassengerController extends Controller
         }
     }
 
-    public function requestRide(Request $request)
-    {
-        try {
-            $user = $request->user('sanctum');
+    // public function requestRide(Request $request)
+    // {
+    //     try {
+    //         $user = $request->user('sanctum');
 
-            if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+    //         if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
 
-            $request->validate([
-                'originLat' => 'required|numeric|between:-90,90',
-                'originLng' => 'required|numeric|between:-180,180',
-                'destLat' => 'required|numeric|between:-90,90',
-                'destLng' => 'required|numeric|between:-180,180',
-                'pickupAddress' => 'required|string',
-                'destinationAddress' => 'required|string',
-                'accepts_pooling' => 'required|boolean',
-                'vehicle_type_id' => 'required|exists:vehicle_types,id',
-            ]);
+    //         $request->validate([
+    //             'originLat' => 'required|numeric|between:-90,90',
+    //             'originLng' => 'required|numeric|between:-180,180',
+    //             'destLat' => 'required|numeric|between:-90,90',
+    //             'destLng' => 'required|numeric|between:-180,180',
+    //             'pickupAddress' => 'required|string',
+    //             'destinationAddress' => 'required|string',
+    //             'accepts_pooling' => 'required|boolean',
+    //             'vehicle_type_id' => 'required|exists:vehicle_types,id',
+    //         ]);
 
-            $vehicleType = VehicleType::findOrFail($request->vehicle_type_id);
+    //         $vehicleType = VehicleType::findOrFail($request->vehicle_type_id);
 
-            // Calculate fare
-            $distance = $this->calculateDistance(
-                $request->originLat,
-                $request->originLng,
-                $request->destLat,
-                $request->destLng
-            );
-            $fare = round(max($vehicleType->base_fare + ($vehicleType->price_per_km * $distance), $vehicleType->minimum_fare), 2);
+    //         // Calculate fare
+    //         $distance = $this->calculateDistance(
+    //             $request->originLat,
+    //             $request->originLng,
+    //             $request->destLat,
+    //             $request->destLng
+    //         );
+    //         $fare = round(max($vehicleType->base_fare + ($vehicleType->price_per_km * $distance), $vehicleType->minimum_fare), 2);
 
-            $radius = 5; // kilometers
-            $platformCommissionRate = floatval($vehicleType->commission_percentage) / 100;
-            $min_balance = $fare * $platformCommissionRate * 1.2;
+    //         $radius = 5; // kilometers
+    //         $platformCommissionRate = floatval($vehicleType->commission_percentage) / 100;
+    //         $min_balance = $fare * $platformCommissionRate * 1.2;
 
-            $sql = "
-                SELECT drivers.*, locations.latitude, locations.longitude,
-                    (
-                        6371 * acos(
-                            cos(radians(?)) *
-                            cos(radians(locations.latitude)) *
-                            cos(radians(locations.longitude) - radians(?)) +
-                            sin(radians(?)) *
-                            sin(radians(locations.latitude))
-                        )
-                    ) AS distance
-                FROM locations
-                INNER JOIN drivers ON locations.driver_id = drivers.id
-                INNER JOIN users ON drivers.user_id = users.id
-                INNER JOIN vehicles ON drivers.id = vehicles.driver_id
-                INNER JOIN wallets ON users.id = wallets.user_id
-                WHERE drivers.status = 'available' 
-                AND drivers.approval_state = 'approved' 
-                AND vehicles.vehicle_type_id = ?
-                AND wallets.balance >= ?
-                AND (
-                        6371 * acos(
-                            cos(radians(?)) *
-                            cos(radians(locations.latitude)) *
-                            cos(radians(locations.longitude) - radians(?)) +
-                            sin(radians(?)) *
-                            sin(radians(locations.latitude))
-                        )
-                    ) <= ?
-                ORDER BY distance ASC
-            ";
+    //         $sql = "
+    //             SELECT drivers.*, locations.latitude, locations.longitude,
+    //                 (
+    //                     6371 * acos(
+    //                         cos(radians(?)) *
+    //                         cos(radians(locations.latitude)) *
+    //                         cos(radians(locations.longitude) - radians(?)) +
+    //                         sin(radians(?)) *
+    //                         sin(radians(locations.latitude))
+    //                     )
+    //                 ) AS distance
+    //             FROM locations
+    //             INNER JOIN drivers ON locations.driver_id = drivers.id
+    //             INNER JOIN users ON drivers.user_id = users.id
+    //             INNER JOIN vehicles ON drivers.id = vehicles.driver_id
+    //             INNER JOIN wallets ON users.id = wallets.user_id
+    //             WHERE drivers.status = 'available' 
+    //             AND drivers.approval_state = 'approved' 
+    //             AND vehicles.vehicle_type_id = ?
+    //             AND wallets.balance >= ?
+    //             AND (
+    //                     6371 * acos(
+    //                         cos(radians(?)) *
+    //                         cos(radians(locations.latitude)) *
+    //                         cos(radians(locations.longitude) - radians(?)) +
+    //                         sin(radians(?)) *
+    //                         sin(radians(locations.latitude))
+    //                     )
+    //                 ) <= ?
+    //             ORDER BY distance ASC
+    //         ";
 
-            $nearestDriver = DB::selectOne($sql, [
-                $request->originLat,
-                $request->originLng,
-                $request->originLat,
-                $vehicleType->id,
-                $min_balance,
-                $request->originLat,
-                $request->originLng,
-                $request->originLat,
-                $radius
-            ]);
+    //         $nearestDriver = DB::selectOne($sql, [
+    //             $request->originLat,
+    //             $request->originLng,
+    //             $request->originLat,
+    //             $vehicleType->id,
+    //             $min_balance,
+    //             $request->originLat,
+    //             $request->originLng,
+    //             $request->originLat,
+    //             $radius
+    //         ]);
 
-            if (!$nearestDriver) {
-                return response()->json(['message' => 'No available drivers nearby.'], 404);
-            }
+    //         if (!$nearestDriver) {
+    //             return response()->json(['message' => 'No available drivers nearby.'], 404);
+    //         }
 
-            // 2. Create the ride only after we have a driver to notify
+    //         // 2. Create the ride only after we have a driver to notify
 
-            DB::beginTransaction();
-            $ride = Ride::create([
-                'passenger_id' => $user->id,
-                'origin_lat' => $request->originLat,
-                'origin_lng' => $request->originLng,
-                'destination_lat' => $request->destLat,
-                'destination_lng' => $request->destLng,
-                'pickup_address' => $request->pickupAddress,
-                'destination_address' => $request->destinationAddress,
-                'status' => "requested",
-                'driver_id' => $nearestDriver->id,
-                'requested_at' => now(),
-                'cash_payment' => true, // Default to cash payment
-                'passenger_accepts_pooling' => $request->boolean('accepts_pooling', false),
-                'price' => $fare,
-                'vehicle_type_id' => $vehicleType->id,
-            ]);
+    //         DB::beginTransaction();
+    //         $ride = Ride::create([
+    //             'passenger_id' => $user->id,
+    //             'origin_lat' => $request->originLat,
+    //             'origin_lng' => $request->originLng,
+    //             'destination_lat' => $request->destLat,
+    //             'destination_lng' => $request->destLng,
+    //             'pickup_address' => $request->pickupAddress,
+    //             'destination_address' => $request->destinationAddress,
+    //             'status' => "requested",
+    //             'driver_id' => $nearestDriver->id,
+    //             'requested_at' => now(),
+    //             'cash_payment' => true, // Default to cash payment
+    //             'passenger_accepts_pooling' => $request->boolean('accepts_pooling', false),
+    //             'price' => $fare,
+    //             'vehicle_type_id' => $vehicleType->id,
+    //         ]);
 
 
 
-            // Broadcast to specific driver (private channel)
-            broadcast(new NewRideRequested($ride))->toOthers();
-            DB::commit();
+    //         $ride->load('passenger');
 
-            return response()->json([
-                'ride' => $ride,
-                'driver_id' => $nearestDriver->id,
-                'driverLatitude' => $nearestDriver->latitude,
-                'driverLongitude' => $nearestDriver->longitude,
-            ], 200);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            if (isset($ride) && $ride->exists) {
-                $ride->delete();
-            }
-            return response()->json(['message' => 'Failed to dispatch ride request.' . $e->getMessage()], 500);
-        }
-    }
+    //         // Broadcast to specific driver (private channel)
+    //         broadcast(new NewRideRequested($ride))->toOthers();
+            
+    //         // Explicitly resolve notification service and ping the driver via FCM
+    //         app(\App\Services\UnifiedNotificationService::class)->notifyUser(
+    //             $nearestDriver->user_id,
+    //             "New Ride Request",
+    //             "A new ride request is available near you.",
+    //             [
+    //                 'type' => 'ride_request',
+    //                 'ride_id' => $ride->id,
+    //                 'pickup_address' => $ride->pickup_address,
+    //                 'destination_address' => $ride->destination_address,
+    //                 'passenger_name' => $ride->passenger->name ?? 'Passenger',
+    //                 'fare' => $ride->price
+    //             ],
+    //             null,
+    //             'Driver'
+    //         );
+            
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'ride' => $ride,
+    //             'driver_id' => $nearestDriver->id,
+    //             'driverLatitude' => $nearestDriver->latitude,
+    //             'driverLongitude' => $nearestDriver->longitude,
+    //         ], 200);
+    //     } catch (\Throwable $e) {
+    //         DB::rollBack();
+    //         if (isset($ride) && $ride->exists) {
+    //             $ride->delete();
+    //         }
+    //         return response()->json(['message' => 'Failed to dispatch ride request.' . $e->getMessage()], 500);
+    //     }
+    // }
 
     /**
      * Driver rejects a ride.
@@ -375,8 +395,27 @@ class PassengerController extends Controller
             $ride->save();
 
             $location = $nextDriver->location;
+            $ride->load('passenger');
 
             broadcast(new NewRideRequested($ride))->toOthers();
+            
+            // Explicitly ping the new driver via FCM to wake them up
+            app(\App\Services\UnifiedNotificationService::class)->notifyUser(
+                $nextDriver->user_id,
+                "New Ride Request",
+                "A new ride request is available near you.",
+                [
+                    'type' => 'ride_request',
+                    'ride_id' => $ride->id,
+                    'pickup_address' => $ride->pickup_address,
+                    'destination_address' => $ride->destination_address,
+                    'passenger_name' => $ride->passenger->name ?? 'Passenger',
+                    'fare' => $ride->price
+                ],
+                null,
+                'Driver'
+            );
+
             broadcast(new RideResponse($ride->passenger_id, "redirect", "Reassigned to another driver", $location, null))->toOthers();
 
             return response()->json(['message' => 'Reassigned to another driver.'], 200);
