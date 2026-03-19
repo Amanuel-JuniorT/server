@@ -45,15 +45,11 @@ class AuthenticatedSessionController extends Controller
             'company_id' => $user->company_id ?? 'not set'
         ]);
 
-        if (in_array($user->role, ['super_admin', 'company_admin', 'admin'])) {
+        if (in_array($user->role, ['super_admin', 'company_admin'])) {
             \App\Services\AuditService::medium('Admin Login', $user, "Admin user {$user->email} logged in.");
         }
 
-        if ($user->role === 'company_admin') {
-            return redirect()->route('company-admin.dashboard');
-        } else {
-            return redirect()->route('dashboard');
-        }
+        return redirect()->route('home');
     }
 
     /**

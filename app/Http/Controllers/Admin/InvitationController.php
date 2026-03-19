@@ -95,7 +95,7 @@ class InvitationController extends Controller
 
       AuditService::high('Admin Invitation Accepted', $admin, "Invitation accepted by: {$admin->name} ({$admin->email})");
 
-      return redirect()->route('dashboard')->with('success', 'Account created successfully.');
+      return redirect()->route('home')->with('success', 'Account created successfully.');
     } catch (\Exception $e) {
       return redirect()->back()->withErrors(['message' => $e->getMessage()]);
     }

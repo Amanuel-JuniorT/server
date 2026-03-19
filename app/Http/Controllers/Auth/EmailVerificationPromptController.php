@@ -18,10 +18,9 @@ class EmailVerificationPromptController extends Controller
         // Verification link is now only sent via Resend email
 
         return $request->user()->hasVerifiedEmail()
-            ? redirect()->intended(route('dashboard', absolute: false))
+            ? redirect()->intended(route('home', absolute: false))
             : Inertia::render('auth/verify-email', [
                 'status' => $request->session()->get('status'),
-                'verificationUrl' => $verificationUrl,
             ]);
     }
 }
