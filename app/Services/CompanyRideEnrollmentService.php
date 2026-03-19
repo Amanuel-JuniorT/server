@@ -41,21 +41,20 @@ class CompanyRideEnrollmentService
         //     return collect();
         // }
 
-        // Check driver rating eligibility
-        if (($driver->rating ?? 0) < self::MIN_RATING) {
-            Log::info('Driver not eligible for company routes due to low rating', [
-                'driver_id' => $driver->id,
-                'rating'    => $driver->rating,
-            ]);
-            return collect();
-        }
+        // TODO: Check driver rating eligibility
+        // if (($driver->rating ?? 0) < self::MIN_RATING) {
+        //     Log::info('Driver not eligible for company routes due to low rating', [
+        //         'driver_id' => $driver->id,
+        //         'rating'    => $driver->rating,
+        //     ]);
+        //     return collect();
+        // }
 
         // All active groups in eligible companies that have at least one pending (unassigned) assignment
         return CompanyRideGroup::where('status', 'active')
             ->where('end_date', '>=', now()->toDateString())
             ->whereHas('assignments', function ($q) {
-                $q->where('status', 'pending')
-                  ->whereNull('driver_id');
+                $q->where('status', 'pending')->whereNull('driver_id');
             })
             ->with(['members.employee', 'company', 'assignments' => function ($q) {
                 $q->where('status', 'pending')->whereNull('driver_id');
