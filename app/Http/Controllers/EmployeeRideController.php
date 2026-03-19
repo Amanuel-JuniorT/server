@@ -108,14 +108,14 @@ class EmployeeRideController extends Controller
                 'id' => $instance->driver->user->id,
                 'name' => $instance->driver->user->name ?? 'Unknown',
                 'phone' => $instance->driver->user->phone ?? null,
-                'profile_image' => $instance->driver->user->profile_image,
+                'profile_image' => $instance->driver->user->profile_image ?? $instance->driver->profile_picture_path,
               ],
               'vehicle' => [
-                'plate_number' => $instance->driver->plate_number,
-                'make' => $instance->driver->make,
-                'model' => $instance->driver->model,
-                'color' => $instance->driver->color,
-                'year' => $instance->driver->year,
+                'plate_number' => $instance->driver->plate_number ?? ($instance->driver->vehicle ? $instance->driver->vehicle->plate_number : null),
+                'make' => $instance->driver->make ?? ($instance->driver->vehicle ? $instance->driver->vehicle->make : null),
+                'model' => $instance->driver->model ?? ($instance->driver->vehicle ? $instance->driver->vehicle->model : null),
+                'color' => $instance->driver->color ?? ($instance->driver->vehicle ? $instance->driver->vehicle->color : null),
+                'year' => $instance->driver->year ?? ($instance->driver->vehicle ? $instance->driver->vehicle->year : null),
               ],
               'location' => $instance->driver->location ? [
                 'latitude' => $instance->driver->location->latitude,
@@ -143,15 +143,17 @@ class EmployeeRideController extends Controller
           if ($activeAssignment && $activeAssignment->driver) {
             $fallbackDriver = [
               'id' => $activeAssignment->driver->id,
-              'name' => $activeAssignment->driver->user->name ?? 'Unknown',
-              'phone' => $activeAssignment->driver->user->phone ?? null,
-              'profile_image' => $activeAssignment->driver->user->profile_image,
+              'user' => [
+                  'name' => $activeAssignment->driver->user->name ?? 'Unknown',
+                  'phone' => $activeAssignment->driver->user->phone ?? null,
+                  'profile_image' => $activeAssignment->driver->user->profile_image ?? $activeAssignment->driver->profile_picture_path,
+              ],
               'vehicle' => [
-                'plate_number' => $activeAssignment->driver->plate_number,
-                'make' => $activeAssignment->driver->make,
-                'model' => $activeAssignment->driver->model,
-                'color' => $activeAssignment->driver->color,
-                'year' => $activeAssignment->driver->year,
+                'plate_number' => $activeAssignment->driver->plate_number ?? ($activeAssignment->driver->vehicle ? $activeAssignment->driver->vehicle->plate_number : null),
+                'make' => $activeAssignment->driver->make ?? ($activeAssignment->driver->vehicle ? $activeAssignment->driver->vehicle->make : null),
+                'model' => $activeAssignment->driver->model ?? ($activeAssignment->driver->vehicle ? $activeAssignment->driver->vehicle->model : null),
+                'color' => $activeAssignment->driver->color ?? ($activeAssignment->driver->vehicle ? $activeAssignment->driver->vehicle->color : null),
+                'year' => $activeAssignment->driver->year ?? ($activeAssignment->driver->vehicle ? $activeAssignment->driver->vehicle->year : null),
               ]
             ];
           }
