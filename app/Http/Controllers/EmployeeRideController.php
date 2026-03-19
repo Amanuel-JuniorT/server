@@ -6,6 +6,7 @@ use App\Models\CompanyGroupRideInstance;
 use App\Models\CompanyRideGroupMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeRideController extends Controller
 {
@@ -108,7 +109,7 @@ class EmployeeRideController extends Controller
                 'id' => $instance->driver->user->id,
                 'name' => $instance->driver->user->name ?? 'Unknown',
                 'phone' => $instance->driver->user->phone ?? null,
-                'profile_image' => ($instance->driver->user->profile_image ?? $instance->driver->profile_picture_path) ? 'storage/' . ($instance->driver->user->profile_image ?? $instance->driver->profile_picture_path) : null,
+                'profile_image' => ($instance->driver->user->profile_image ?? $instance->driver->profile_picture_path) ? Storage::url($instance->driver->user->profile_image ?? $instance->driver->profile_picture_path) : null,
               ],
               'vehicle' => [
                 'plate_number' => $instance->driver->plate_number ?? ($instance->driver->vehicle ? $instance->driver->vehicle->plate_number : null),
@@ -146,7 +147,7 @@ class EmployeeRideController extends Controller
               'user' => [
                   'name' => $activeAssignment->driver->user->name ?? 'Unknown',
                   'phone' => $activeAssignment->driver->user->phone ?? null,
-                  'profile_image' => ($activeAssignment->driver->user->profile_image ?? $activeAssignment->driver->profile_picture_path) ? 'storage/' . ($activeAssignment->driver->user->profile_image ?? $activeAssignment->driver->profile_picture_path) : null,
+                  'profile_image' => ($activeAssignment->driver->user->profile_image ?? $activeAssignment->driver->profile_picture_path) ? Storage::url($activeAssignment->driver->user->profile_image ?? $activeAssignment->driver->profile_picture_path) : null,
               ],
               'vehicle' => [
                 'plate_number' => $activeAssignment->driver->plate_number ?? ($activeAssignment->driver->vehicle ? $activeAssignment->driver->vehicle->plate_number : null),
