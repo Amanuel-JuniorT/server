@@ -25,19 +25,21 @@ class CompanyRideEnrollmentService
     public function getOpenGroupsForDriver(Driver $driver)
     {
         // Only show groups that belong to companies that have an active contract with this driver
-        $eligibleCompanyIds = DB::table('company_driver_contracts')
-            ->where('driver_id', $driver->id)
-            ->where('status', 'active')
-            ->where('start_date', '<=', now()->toDateString())
-            ->where(function ($q) {
-                $q->whereNull('end_date')
-                  ->orWhere('end_date', '>=', now()->toDateString());
-            })
-            ->pluck('company_id');
 
-        if ($eligibleCompanyIds->isEmpty()) {
-            return collect();
-        }
+        // TODO: Implement the logic to get the eligible (who have contract) companies
+        // $eligibleCompanyIds = DB::table('company_driver_contracts')
+        //     ->where('driver_id', $driver->id)
+        //     ->where('status', 'active')
+        //     ->where('start_date', '<=', now()->toDateString())
+        //     ->where(function ($q) {
+        //         $q->whereNull('end_date')
+        //           ->orWhere('end_date', '>=', now()->toDateString());
+        //     })
+        //     ->pluck('company_id');
+
+        // if ($eligibleCompanyIds->isEmpty()) {
+        //     return collect();
+        // }
 
         // Check driver rating eligibility
         if (($driver->rating ?? 0) < self::MIN_RATING) {
@@ -49,8 +51,7 @@ class CompanyRideEnrollmentService
         }
 
         // All active groups in eligible companies that have at least one pending (unassigned) assignment
-        return CompanyRideGroup::whereIn('company_id', $eligibleCompanyIds)
-            ->where('status', 'active')
+        return CompanyRideGroup::where('status', 'active')
             ->where('end_date', '>=', now()->toDateString())
             ->whereHas('assignments', function ($q) {
                 $q->where('status', 'pending')
