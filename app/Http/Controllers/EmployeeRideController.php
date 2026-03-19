@@ -183,18 +183,11 @@ class EmployeeRideController extends Controller
             'start_date' => $group->start_date,
             'end_date' => $group->end_date,
             'status' => 'scheduled',
-            'driver' => $fallbackDriver ? [
-              'id' => $fallbackDriver['id'],
-              'user' => [
-                'name' => $fallbackDriver['name'],
-                'phone' => $fallbackDriver['phone'],
-                'profile_image' => $fallbackDriver['profile_image'],
-              ],
-              'vehicle' => $fallbackDriver['vehicle'],
-            ] : null,
-            'driver_name' => $fallbackDriver['name'] ?? null,
-            'driver_phone' => $fallbackDriver['phone'] ?? null,
-            'vehicle_number' => $fallbackDriver ? $fallbackDriver['vehicle']['plate_number'] : null,
+            'status' => 'scheduled',
+            'driver' => $fallbackDriver,
+            'driver_name' => $fallbackDriver['user']['name'] ?? null,
+            'driver_phone' => $fallbackDriver['user']['phone'] ?? null,
+            'vehicle_number' => $fallbackDriver['vehicle']['plate_number'] ?? null,
             'company_name' => $group->company->name ?? 'Unknown Company',
             'fellow_passengers' => $group->members
               ->where('employee_id', '!=', $member->employee_id)
