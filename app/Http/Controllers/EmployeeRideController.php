@@ -77,8 +77,12 @@ class EmployeeRideController extends Controller
         if ($instance) {
           // Use instance data
           $groupType = $group->group_type ?? 'to_office';
-          $pickup = $groupType === 'to_office' ? $member->custom_pickup_address : $group->pickup_address;
-          $destination = $groupType === 'from_office' ? $member->custom_pickup_address : $group->destination_address;
+          $pickup = $groupType === 'to_office' 
+              ? ($member->custom_pickup_address ?: $member->pickup_address) 
+              : $group->pickup_address;
+          $destination = $groupType === 'from_office' 
+              ? ($member->custom_pickup_address ?: $member->pickup_address) 
+              : $group->destination_address;
 
           return [
             'id' => $instance->id,
@@ -87,13 +91,13 @@ class EmployeeRideController extends Controller
             'pickup_location' => $pickup,
             'pickup_address' => $pickup,
             'origin_address' => $pickup,
-            'pickup_lat' => $groupType === 'to_office' ? $member->custom_pickup_lat : $group->pickup_lat,
-            'pickup_lng' => $groupType === 'to_office' ? $member->custom_pickup_lng : $group->pickup_lng,
+            'pickup_lat' => $groupType === 'to_office' ? ($member->custom_pickup_lat ?: $member->pickup_lat) : $group->pickup_lat,
+            'pickup_lng' => $groupType === 'to_office' ? ($member->custom_pickup_lng ?: $member->pickup_lng) : $group->pickup_lng,
             'dropoff_location' => $destination,
             'dropoff_address' => $destination,
             'destination_address' => $destination,
-            'dropoff_lat' => $groupType === 'from_office' ? $member->custom_pickup_lat : $group->destination_lat,
-            'dropoff_lng' => $groupType === 'from_office' ? $member->custom_pickup_lng : $group->destination_lng,
+            'dropoff_lat' => $groupType === 'from_office' ? ($member->custom_pickup_lat ?: $member->pickup_lat) : $group->destination_lat,
+            'dropoff_lng' => $groupType === 'from_office' ? ($member->custom_pickup_lng ?: $member->pickup_lng) : $group->destination_lng,
             'scheduled_time' => $instance->scheduled_time->toDateTimeString(),
             'start_date' => $group->start_date,
             'end_date' => $group->end_date,
@@ -104,14 +108,16 @@ class EmployeeRideController extends Controller
                 'id' => $instance->driver->user->id,
                 'name' => $instance->driver->user->name ?? 'Unknown',
                 'phone' => $instance->driver->user->phone ?? null,
+                'profile_image' => $instance->driver->user->profile_image,
               ],
               'vehicle' => [
                 'plate_number' => $instance->driver->plate_number,
                 'make' => $instance->driver->make,
                 'model' => $instance->driver->model,
                 'color' => $instance->driver->color,
+                'year' => $instance->driver->year,
               ],
-              'location' => $instance->driver->location ? [ // Added driver location
+              'location' => $instance->driver->location ? [
                 'latitude' => $instance->driver->location->latitude,
                 'longitude' => $instance->driver->location->longitude,
               ] : null,
@@ -131,7 +137,7 @@ class EmployeeRideController extends Controller
           $groupType = $group->group_type ?? 'to_office';
 
           // Find if there's an active driver assignment for this group
-          $activeAssignment = $group->assignments->first();
+          $activeAssignment = $group->assignments->where('status', 'accepted')->first();
           $fallbackDriver = null;
 
           if ($activeAssignment && $activeAssignment->driver) {
@@ -139,11 +145,23 @@ class EmployeeRideController extends Controller
               'id' => $activeAssignment->driver->id,
               'name' => $activeAssignment->driver->user->name ?? 'Unknown',
               'phone' => $activeAssignment->driver->user->phone ?? null,
+              'profile_image' => $activeAssignment->driver->user->profile_image,
+              'vehicle' => [
+                'plate_number' => $activeAssignment->driver->plate_number,
+                'make' => $activeAssignment->driver->make,
+                'model' => $activeAssignment->driver->model,
+                'color' => $activeAssignment->driver->color,
+                'year' => $activeAssignment->driver->year,
+              ]
             ];
           }
 
-          $pickup = $groupType === 'to_office' ? $member->custom_pickup_address : $group->pickup_address;
-          $destination = $groupType === 'from_office' ? $member->custom_pickup_address : $group->destination_address;
+          $pickup = $groupType === 'to_office' 
+              ? ($member->custom_pickup_address ?: $member->pickup_address) 
+              : $group->pickup_address;
+          $destination = $groupType === 'from_office' 
+              ? ($member->custom_pickup_address ?: $member->pickup_address) 
+              : $group->destination_address;
 
           return [
             'id' => 0, // No specific instance ID
@@ -152,13 +170,13 @@ class EmployeeRideController extends Controller
             'pickup_location' => $pickup,
             'pickup_address' => $pickup,
             'origin_address' => $pickup,
-            'pickup_lat' => $groupType === 'to_office' ? $member->custom_pickup_lat : $group->pickup_lat,
-            'pickup_lng' => $groupType === 'to_office' ? $member->custom_pickup_lng : $group->pickup_lng,
+            'pickup_lat' => $groupType === 'to_office' ? ($member->custom_pickup_lat ?: $member->pickup_lat) : $group->pickup_lat,
+            'pickup_lng' => $groupType === 'to_office' ? ($member->custom_pickup_lng ?: $member->pickup_lng) : $group->pickup_lng,
             'dropoff_location' => $destination,
             'dropoff_address' => $destination,
             'destination_address' => $destination,
-            'dropoff_lat' => $groupType === 'from_office' ? $member->custom_pickup_lat : $group->destination_lat,
-            'dropoff_lng' => $groupType === 'from_office' ? $member->custom_pickup_lng : $group->destination_lng,
+            'dropoff_lat' => $groupType === 'from_office' ? ($member->custom_pickup_lat ?: $member->pickup_lat) : $group->destination_lat,
+            'dropoff_lng' => $groupType === 'from_office' ? ($member->custom_pickup_lng ?: $member->pickup_lng) : $group->destination_lng,
             'scheduled_time' => now()->format('Y-m-d') . 'T' . $group->scheduled_time->format('H:i:s') . '.000000Z',
             'start_date' => $group->start_date,
             'end_date' => $group->end_date,
@@ -168,11 +186,13 @@ class EmployeeRideController extends Controller
               'user' => [
                 'name' => $fallbackDriver['name'],
                 'phone' => $fallbackDriver['phone'],
-              ]
+                'profile_image' => $fallbackDriver['profile_image'],
+              ],
+              'vehicle' => $fallbackDriver['vehicle'],
             ] : null,
             'driver_name' => $fallbackDriver['name'] ?? null,
             'driver_phone' => $fallbackDriver['phone'] ?? null,
-            'vehicle_number' => $activeAssignment && $activeAssignment->driver ? $activeAssignment->driver->plate_number : null,
+            'vehicle_number' => $fallbackDriver ? $fallbackDriver['vehicle']['plate_number'] : null,
             'company_name' => $group->company->name ?? 'Unknown Company',
             'fellow_passengers' => $group->members
               ->where('employee_id', '!=', $member->employee_id)
