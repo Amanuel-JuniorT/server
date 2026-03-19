@@ -80,7 +80,6 @@ export default function CompaniesPage() {
         email: '',
         is_active: true,
         admin_email: '',
-        admin_password: '',
     });
 
     const [assignDriverForm, setAssignDriverForm] = useState({
@@ -101,7 +100,6 @@ export default function CompaniesPage() {
             email: '',
             is_active: true,
             admin_email: '',
-            admin_password: '',
         });
     };
 
@@ -460,20 +458,6 @@ export default function CompaniesPage() {
                                                 <p className="text-muted-foreground text-xs">
                                                     Email for admin login credentials (can be different from company email)
                                                 </p>
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="admin_password">Admin Password *</Label>
-                                                <Input
-                                                    id="admin_password"
-                                                    type="password"
-                                                    value={formData.admin_password}
-                                                    onChange={(e) => setFormData({ ...formData, admin_password: e.target.value })}
-                                                    placeholder="Minimum 8 characters"
-                                                    required
-                                                    minLength={8}
-                                                    disabled={isSubmitting}
-                                                />
-                                                <p className="text-muted-foreground text-xs">Password must be at least 8 characters long</p>
                                             </div>
                                         </div>
                                     </div>

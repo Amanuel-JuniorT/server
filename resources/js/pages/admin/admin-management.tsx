@@ -21,8 +21,7 @@ export default function AdminManagement({ admins, invitations, companies }) {
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         email: '',
-        role: 'company_admin',
-        company_id: '',
+        role: 'super_admin',
     });
 
     const submitInvite = (e) => {
@@ -229,37 +228,17 @@ export default function AdminManagement({ admins, invitations, companies }) {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="role">Role</Label>
                             <Select value={data.role} onValueChange={(value) => setData('role', value)}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="admin">Platform Admin</SelectItem>
-                                    <SelectItem value="company_admin">Company Admin</SelectItem>
+                                    <SelectItem value="super_admin">Platform Admin</SelectItem>
                                 </SelectContent>
                             </Select>
                             <InputError message={errors.role} />
                         </div>
 
-                        {data.role === 'company_admin' && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="company_id">Company</Label>
-                                <Select value={data.company_id} onValueChange={(value) => setData('company_id', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a company" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {companies.map((company) => (
-                                            <SelectItem key={company.id} value={company.id.toString()}>
-                                                {company.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={errors.company_id} />
-                            </div>
-                        )}
 
                         <DialogFooter className="pt-4">
                             <Button type="button" variant="outline" onClick={() => setShowInviteModal(false)}>

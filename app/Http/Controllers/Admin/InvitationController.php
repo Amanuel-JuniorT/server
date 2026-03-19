@@ -26,7 +26,7 @@ class InvitationController extends Controller
   {
     $validated = $request->validate([
       'email' => 'required|email|unique:admins,email',
-      'role' => 'required|in:admin,company_admin',
+      'role' => 'required|in:super_admin,company_admin',
       'company_id' => [
         'nullable',
         'integer',

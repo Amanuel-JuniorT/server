@@ -15,15 +15,7 @@ class EmailVerificationPromptController extends Controller
      */
     public function __invoke(Request $request): Response|RedirectResponse
     {
-        $verificationUrl = null;
-        if (app()->environment('local')) {
-            $user = $request->user();
-            $verificationUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                'verification.verify',
-                now()->addMinutes(60),
-                ['id' => $user->getKey(), 'hash' => sha1($user->getEmailForVerification())]
-            );
-        }
+        // Verification link is now only sent via Resend email
 
         return $request->user()->hasVerifiedEmail()
             ? redirect()->intended(route('dashboard', absolute: false))

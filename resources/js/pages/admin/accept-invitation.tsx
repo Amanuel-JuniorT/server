@@ -38,6 +38,7 @@ export default function AcceptInvitation({ token, email, invited_by, role }: Acc
             <Head title="Accept Invitation" />
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
+                <InputError message={errors.message} />
                 <div className="grid gap-6">
                     <div className="grid gap-2">
                         <Label htmlFor="name">Your Full Name</Label>

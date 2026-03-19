@@ -20,9 +20,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+
+use App\Services\AdminInvitationService;
 
 class AdminDashboardController extends Controller
 {
+    protected $invitationService;
+
+    public function __construct(AdminInvitationService $invitationService)
+    {
+        $this->invitationService = $invitationService;
+    }
     public function index(Request $request)
     {
         $statsQuery = DB::selectOne("
@@ -1104,7 +1113,6 @@ class AdminDashboardController extends Controller
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255|unique:companies,email',
             'admin_email' => 'required|email|max:255|unique:admins,email',
-            'admin_password' => 'required|string|min:8',
         ], [
             'name.unique' => 'A company with this name already exists.',
             'code.unique' => 'A company with this code already exists.',
@@ -1113,8 +1121,6 @@ class AdminDashboardController extends Controller
             'admin_email.required' => 'Admin email is required.',
             'admin_email.email' => 'Please enter a valid admin email address.',
             'admin_email.unique' => 'An admin with this email already exists.',
-            'admin_password.required' => 'Admin password is required.',
-            'admin_password.min' => 'Admin password must be at least 8 characters.',
         ]);
 
         if ($validator->fails()) {
@@ -1141,16 +1147,15 @@ class AdminDashboardController extends Controller
 
             $company = Company::create($companyData);
 
-            // Create company admin account
-            $admin = \App\Models\Admin::create([
-                'name' => $company->name . ' Admin',
-                'email' => $request->admin_email,
-                'password' => Hash::make($request->admin_password),
-                'role' => 'company_admin',
-                'company_id' => $company->id,
-            ]);
+            // Create admin invitation instead of direct account creation
+            $invitation = $this->invitationService->createInvitation(
+                $request->admin_email,
+                'company_admin',
+                $company->id,
+                Auth::user()
+            );
 
-            AuditService::medium('Company Created', $company, "Created company {$company->name} and admin {$admin->email}");
+            AuditService::medium('Company Created', $company, "Created company {$company->name} and sent admin invitation to {$request->admin_email}");
 
             DB::commit();
 
