@@ -4,6 +4,8 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { Building2, Car, CheckCircle, Clock, Users, XCircle } from 'lucide-react';
+import SetupChecklist from '@/components/company/setup-checklist';
+import SetupBanner from '@/components/company/setup-banner';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -13,7 +15,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function CompanyAdminDashboard() {
-    const { company, stats, billing } = usePage<
+    const { company, stats, billing, companySetup } = usePage<
         SharedData & {
             company: {
                 id: number;
@@ -33,6 +35,17 @@ export default function CompanyAdminDashboard() {
                 scheduled_rides: number;
                 completed_rides: number;
             };
+            companySetup: {
+                is_complete: boolean;
+                progress: number;
+                steps: Array<{
+                    id: string;
+                    title: string;
+                    description: string;
+                    completed: boolean;
+                }>;
+                missing_fields: string[];
+            };
             billing?: { labels: string[]; data: number[]; currency?: string };
         }
     >().props;
@@ -42,6 +55,8 @@ export default function CompanyAdminDashboard() {
             <Head title="Company Dashboard" />
 
             <div className="space-y-6">
+                <SetupBanner setupStatus={companySetup} />
+
                 {/* Company Info Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -53,6 +68,13 @@ export default function CompanyAdminDashboard() {
                         Company Admin
                     </Badge>
                 </div>
+
+                {/* Setup Checklist if incomplete */}
+                {!companySetup.is_complete && (
+                    <div className="max-w-2xl">
+                        <SetupChecklist setupStatus={companySetup} />
+                    </div>
+                )}
 
                 {/* Billing Cost (Last 30 days) */}
                 {billing && (

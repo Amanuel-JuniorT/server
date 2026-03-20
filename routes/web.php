@@ -267,8 +267,8 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsCompanyA
                 'id' => $company->id,
                 'name' => $company->name,
                 'address' => $company->address,
-                'latitude' => $company->latitude,
-                'longitude' => $company->longitude,
+                'latitude' => $company->default_origin_lat,
+                'longitude' => $company->default_origin_lng,
             ]
         ]);
     });

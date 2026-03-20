@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SimpleTable as Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
+import { type SharedData } from '@/types';
+import SetupBanner from '@/components/company/setup-banner';
 import { Loader2, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -56,6 +58,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: number }) {
+    const { companySetup } = usePage<SharedData & { 
+        companySetup: { 
+            is_complete: boolean; 
+            progress: number; 
+            missing_fields: string[] 
+        } 
+    }>().props;
+
     const [groups, setGroups] = useState<RideGroup[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
@@ -71,6 +81,12 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
         start_date: '',
         end_date: '',
         max_capacity: 4,
+        pickup_address: '',
+        pickup_lat: '',
+        pickup_lng: '',
+        destination_address: '',
+        destination_lat: '',
+        destination_lng: '',
     });
 
     const [selectedEmployees, setSelectedEmployees] = useState<EmployeeMember[]>([]);
@@ -227,15 +243,15 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                 },
                 body: JSON.stringify({
                     ...formData,
-                    // If To Office, group pickup is the first employee's address
-                    pickup_address: formData.group_type === 'to_office' ? selectedEmployees[0].address : formData.pickup_address,
-                    pickup_lat: formData.group_type === 'to_office' ? selectedEmployees[0].latitude : formData.pickup_lat,
-                    pickup_lng: formData.group_type === 'to_office' ? selectedEmployees[0].longitude : formData.pickup_lng,
+                    // If To Office, group pickup is the first employee's address, destination is office
+                    pickup_address: formData.group_type === 'to_office' ? selectedEmployees[0].address : (companyInfo?.address || ''),
+                    pickup_lat: formData.group_type === 'to_office' ? selectedEmployees[0].latitude : (companyInfo?.latitude?.toString() || ''),
+                    pickup_lng: formData.group_type === 'to_office' ? selectedEmployees[0].longitude : (companyInfo?.longitude?.toString() || ''),
 
-                    // If From Office, group destination is the last (or first) employee's home
-                    destination_address: formData.group_type === 'from_office' ? selectedEmployees[0].address : formData.destination_address,
-                    destination_lat: formData.group_type === 'from_office' ? selectedEmployees[0].latitude : formData.destination_lat,
-                    destination_lng: formData.group_type === 'from_office' ? selectedEmployees[0].longitude : formData.destination_lng,
+                    // If From Office, group pickup is office, destination is the first employee's home
+                    destination_address: formData.group_type === 'from_office' ? selectedEmployees[0].address : (companyInfo?.address || ''),
+                    destination_lat: formData.group_type === 'from_office' ? selectedEmployees[0].latitude : (companyInfo?.latitude?.toString() || ''),
+                    destination_lng: formData.group_type === 'from_office' ? selectedEmployees[0].longitude : (companyInfo?.longitude?.toString() || ''),
 
                     members: selectedEmployees,
                 }),
@@ -340,15 +356,16 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="My Ride Groups" />
-
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
+ 
+             <div className="space-y-6">
+                <SetupBanner setupStatus={companySetup} />
+                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">My Ride Groups</h1>
                         <p className="text-muted-foreground">Manage recurring ride groups for your employees</p>
                     </div>
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                        <Button onClick={handleCreateClick}>
+                        <Button onClick={handleCreateClick} disabled={!companySetup.is_complete}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Ride Group
                         </Button>
@@ -597,10 +614,21 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(group)} className="mr-2">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => handleEdit(group)} 
+                                                    className="mr-2"
+                                                    disabled={!companySetup.is_complete}
+                                                >
                                                     <Pencil className="h-4 w-4 text-blue-500" />
                                                 </Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(group.id)}>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => handleDelete(group.id)}
+                                                    disabled={!companySetup.is_complete}
+                                                >
                                                     <Trash2 className="text-destructive h-4 w-4" />
                                                 </Button>
                                             </TableCell>

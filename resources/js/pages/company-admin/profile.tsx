@@ -201,6 +201,9 @@ export default function CompanyAdminProfilePage() {
                                             default_origin_lng: String(val.lng),
                                         });
                                     }}
+                                    onAddressChange={(address) => {
+                                        setFormData({ ...formData, address });
+                                    }}
                                 />
 
                                 {/* Map Integration */}
@@ -208,14 +211,30 @@ export default function CompanyAdminProfilePage() {
                                     <LocationPickerMap
                                         lat={Number(formData.default_origin_lat)}
                                         lng={Number(formData.default_origin_lng)}
-                                        onLocationSelect={(lat, lng) => {
+                                        onLocationSelect={async (lat, lng) => {
                                             setFormData({
                                                 ...formData,
                                                 default_origin_lat: String(lat),
                                                 default_origin_lng: String(lng),
                                             });
-                                            // Optional: reverse geocode here could update address if needed
-                                            toast.success('Location pin updated');
+                                            
+                                            // Reverse geocode on marker drop for cleaner address
+                                            try {
+                                                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`);
+                                                const data = await res.json();
+                                                if (data.address) {
+                                                    const parts = [];
+                                                    const a = data.address;
+                                                    if (a.road) parts.push(a.road);
+                                                    if (a.suburb || a.neighbourhood) parts.push(a.suburb || a.neighbourhood);
+                                                    if (a.city || a.town || a.village) parts.push(a.city || a.town || a.village);
+                                                    
+                                                    const cleanAddress = parts.length > 0 ? parts.join(', ') : data.display_name;
+                                                    setFormData(prev => ({ ...prev, address: cleanAddress }));
+                                                }
+                                            } catch (e) {
+                                                console.error("Reverse geocoding failed", e);
+                                            }
                                         }}
                                     />
                                 </div>
@@ -258,35 +277,37 @@ export default function CompanyAdminProfilePage() {
                                             }
                                             navigator.geolocation.getCurrentPosition(
                                                 async (pos) => {
-                                                    const { latitude, longitude } = pos.coords;
-                                                    // Reverse geocode via Nominatim
+                                                    const lat = pos.coords.latitude;
+                                                    const lng = pos.coords.longitude;
                                                     try {
-                                                        const url = new URL('https://nominatim.openstreetmap.org/reverse');
-                                                        url.searchParams.set('format', 'jsonv2');
-                                                        url.searchParams.set('lat', String(latitude));
-                                                        url.searchParams.set('lon', String(longitude));
-                                                        const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+                                                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`);
                                                         const data = await res.json();
-                                                        const address = data?.display_name || 'Current location';
+                                                        let cleanAddress = data?.display_name || 'Current location';
+                                                        if (data?.address) {
+                                                            const a = data.address;
+                                                            const parts = [];
+                                                            if (a.road) parts.push(a.road);
+                                                            if (a.suburb || a.neighbourhood) parts.push(a.suburb || a.neighbourhood);
+                                                            if (a.city || a.town || a.village) parts.push(a.city || a.town || a.village);
+                                                            if (parts.length > 0) cleanAddress = parts.join(', ');
+                                                        }
                                                         setFormData({
                                                             ...formData,
-                                                            address: address,
-                                                            default_origin_lat: String(latitude),
-                                                            default_origin_lng: String(longitude),
+                                                            address: cleanAddress,
+                                                            default_origin_lat: String(lat),
+                                                            default_origin_lng: String(lng),
                                                         });
-                                                        toast.success('Office location set from current location');
+                                                        toast.success('Office location set');
                                                     } catch (e) {
                                                         setFormData({
                                                             ...formData,
-                                                            default_origin_lat: String(latitude),
-                                                            default_origin_lng: String(longitude),
+                                                            default_origin_lat: String(lat),
+                                                            default_origin_lng: String(lng),
                                                         });
                                                         toast.success('Coordinates captured');
                                                     }
                                                 },
-                                                (err) => {
-                                                    toast.error('Failed to get current location');
-                                                },
+                                                () => toast.error('Failed to get current location')
                                             );
                                         }}
                                     >

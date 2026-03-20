@@ -11,11 +11,25 @@ class Wallet extends Model
 
     // Let Laravel use the default 'id' as primary key
     // user_id is just a foreign key column, not the primary key
-    protected $fillable = ['user_id', 'balance'];
+    // user_id and company_id are foreign key columns
+    protected $fillable = ['user_id', 'company_id', 'balance'];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Get the owner of the wallet (User or Company)
+     */
+    public function getHolderAttribute()
+    {
+        return $this->company_id ? $this->company : $this->user;
     }
 
     public function transactions()

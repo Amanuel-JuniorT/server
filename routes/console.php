@@ -20,3 +20,8 @@ Schedule::command('company:generate-rides')->dailyAt('00:01');
 Schedule::command('rides:check-scheduled')->everyMinute();
 
 Schedule::command('rides:expire')->everyMinute();
+
+// Schedule daily financial audit for transaction integrity
+Schedule::call(function () {
+    (new \App\Services\TransactionVerificationService())->auditAllWallets();
+})->dailyAt('03:00')->name('audit-financial-integrity');

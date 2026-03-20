@@ -280,4 +280,50 @@ class AdminCompanyController extends Controller
       ], 500);
     }
   }
+
+  /**
+   * Update company billing settings (Postpaid/Prepaid/Credit Limit)
+   */
+  public function updateBilling(Request $request, $id)
+  {
+    $validator = Validator::make($request->all(), [
+      'billing_type' => 'required|in:prepaid,weekly_postpaid,monthly_postpaid',
+      'credit_limit' => 'required|numeric|min:0'
+    ]);
+
+    if ($validator->fails()) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Validation failed',
+        'errors' => $validator->errors()
+      ], 422);
+    }
+
+    try {
+      $company = Company::findOrFail($id);
+      
+      $company->update([
+        'billing_type' => $request->billing_type,
+        'credit_limit' => $request->credit_limit
+      ]);
+
+      AuditService::high('Billing Updated', $company, "Updated billing for {$company->name} to {$request->billing_type} with limit {$request->credit_limit}");
+
+      return response()->json([
+        'success' => true,
+        'data' => [
+          'company_id' => $company->id,
+          'billing_type' => $company->billing_type,
+          'credit_limit' => $company->credit_limit
+        ],
+        'message' => 'Billing settings updated successfully'
+      ]);
+    } catch (\Exception $e) {
+      return response()->json([
+        'success' => false,
+        'message' => 'Failed to update billing settings',
+        'error' => $e->getMessage()
+      ], 500);
+    }
+  }
 }

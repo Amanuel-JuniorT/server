@@ -66,6 +66,9 @@ class HandleInertiaRequests extends Middleware
                 'company_payments' => \App\Models\CompanyPaymentReceipt::where('status', 'pending')->count(),
                 'wallet_topups' => \App\Models\Transaction::where('status', 'pending')->where('type', 'topup')->count(),
             ] : null,
+            'companySetup' => $request->user() && $request->user()->role === 'company_admin' && $request->user()->company 
+                ? $request->user()->company->setup_status 
+                : null,
         ];
     }
 }

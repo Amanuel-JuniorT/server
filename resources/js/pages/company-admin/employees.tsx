@@ -12,6 +12,8 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Building2, Check, CheckCircle, Clock, Eye, RefreshCw, Trash2, Upload, User, UserPlus, X, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import SetupBanner from '@/components/company/setup-banner';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 interface CompanyEmployee {
     id: number;
@@ -45,7 +47,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function CompanyAdminEmployeesPage() {
-    const { employees, company, stats } = usePage<
+    const { employees, company, stats, companySetup } = usePage<
         SharedData & {
             employees: CompanyEmployee[];
             company: {
@@ -59,31 +61,43 @@ export default function CompanyAdminEmployeesPage() {
                 pending_requests: number;
                 rejected_requests: number;
             };
+            companySetup: {
+                is_complete: boolean;
+                progress: number;
+                missing_fields: string[];
+            };
         }
     >().props;
 
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-    const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
     const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
     const [isDeleteEmployeeDialogOpen, setIsDeleteEmployeeDialogOpen] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState<CompanyEmployee | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [rejectionReason, setRejectionReason] = useState('');
+    const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
+    const [addEmployeeStep, setAddEmployeeStep] = useState(1);
     const [newEmployee, setNewEmployee] = useState({
         phone: '',
         name: '',
         email: '',
         password: '',
+        home_address: '',
+        home_lat: null as number | null,
+        home_lng: null as number | null,
     });
+    const [isCheckingUser, setIsCheckingUser] = useState(false);
     const [userExists, setUserExists] = useState<boolean | null>(null);
     const [foundUser, setFoundUser] = useState<{
         name: string;
         email: string;
-        isEmployee?: boolean;
+        isEmployee: boolean;
         employeeStatus?: string;
+        home_address?: string;
+        home_lat?: number;
+        home_lng?: number;
     } | null>(null);
-    const [isCheckingUser, setIsCheckingUser] = useState(false);
     const [csvFile, setCsvFile] = useState<File | null>(null);
 
     const handleApproveEmployee = async (employeeId: number) => {
@@ -167,7 +181,20 @@ export default function CompanyAdminEmployeesPage() {
                         email: data.email,
                         isEmployee: data.isEmployee,
                         employeeStatus: data.employeeStatus,
+                        home_address: data.home_address,
+                        home_lat: data.home_lat,
+                        home_lng: data.home_lng,
                     });
+
+                    // Smart Sync: Pre-fill address if found
+                    if (data.home_address) {
+                        setNewEmployee(prev => ({
+                            ...prev,
+                            home_address: data.home_address,
+                            home_lat: data.home_lat,
+                            home_lng: data.home_lng
+                        }));
+                    }
                 } else {
                     setFoundUser(null);
                 }
@@ -191,7 +218,16 @@ export default function CompanyAdminEmployeesPage() {
                 onSuccess: () => {
                     toast.success('Employee added successfully');
                     setIsAddEmployeeDialogOpen(false);
-                    setNewEmployee({ phone: '', name: '', email: '', password: '' });
+                    setNewEmployee({ 
+                        phone: '', 
+                        name: '', 
+                        email: '', 
+                        password: '',
+                        home_address: '',
+                        home_lat: null,
+                        home_lng: null
+                    });
+                    setAddEmployeeStep(1);
                     setUserExists(null);
                     setFoundUser(null);
                     router.reload();
@@ -318,6 +354,8 @@ export default function CompanyAdminEmployeesPage() {
             <Head title="My Employees" />
 
             <div className="space-y-6">
+                <SetupBanner setupStatus={companySetup} />
+
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -339,11 +377,20 @@ export default function CompanyAdminEmployeesPage() {
                         >
                             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                         </Button>
-                        <Button onClick={() => setIsAddEmployeeDialogOpen(true)} className="flex items-center gap-2">
+                        <Button 
+                            onClick={() => setIsAddEmployeeDialogOpen(true)} 
+                            className="flex items-center gap-2"
+                            disabled={!companySetup.is_complete}
+                        >
                             <UserPlus className="h-4 w-4" />
                             Add Employee
                         </Button>
-                        <Button onClick={() => setIsBulkUploadDialogOpen(true)} variant="outline" className="flex items-center gap-2">
+                        <Button 
+                            onClick={() => setIsBulkUploadDialogOpen(true)} 
+                            variant="outline" 
+                            className="flex items-center gap-2"
+                            disabled={!companySetup.is_complete}
+                        >
                             <Upload className="h-4 w-4" />
                             Bulk Upload
                         </Button>
@@ -625,124 +672,172 @@ export default function CompanyAdminEmployeesPage() {
                     </DialogContent>
                 </Dialog>
 
-                {/* Add Employee Dialog */}
-                <Dialog open={isAddEmployeeDialogOpen} onOpenChange={setIsAddEmployeeDialogOpen}>
-                    <DialogContent>
+                {/* Add Employee Dialog (Multi-step) */}
+                <Dialog 
+                    open={isAddEmployeeDialogOpen} 
+                    onOpenChange={(open) => {
+                        setIsAddEmployeeDialogOpen(open);
+                        if (!open) {
+                            setAddEmployeeStep(1);
+                            setNewEmployee({ phone: '', name: '', email: '', password: '', home_address: '', home_lat: null, home_lng: null });
+                            setUserExists(null);
+                            setFoundUser(null);
+                        }
+                    }}
+                >
+                    <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
                             <DialogTitle>Add New Employee</DialogTitle>
                             <DialogDescription>
-                                Enter the employee's phone number. If they're already registered, they'll be added directly. If not, you'll need to
-                                provide additional details to create their account.
+                                {addEmployeeStep === 1 
+                                    ? "Identify the employee and enter their details." 
+                                    : "Set the employee's home address for ride group pickups."}
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="phone">Phone Number *</Label>
-                                <Input
-                                    id="phone"
-                                    placeholder="Enter employee phone number"
-                                    value={newEmployee.phone}
-                                    onChange={(e) => {
-                                        const phone = e.target.value;
-                                        setNewEmployee({ ...newEmployee, phone });
-                                        // Check if user exists after a short delay
-                                        setTimeout(() => checkUserExists(phone), 500);
-                                    }}
-                                    required
-                                />
-                                {isCheckingUser && <p className="text-muted-foreground text-sm">Checking if user exists...</p>}
-                                {userExists === true && foundUser && (
+
+                        {/* Progress Stepper */}
+                        <div className="mb-4 flex items-center justify-center gap-2">
+                            <div className={`h-2 w-16 rounded-full ${addEmployeeStep === 1 ? 'bg-primary' : 'bg-muted'}`} />
+                            <div className={`h-2 w-16 rounded-full ${addEmployeeStep === 2 ? 'bg-primary' : 'bg-muted'}`} />
+                        </div>
+
+                        {addEmployeeStep === 1 ? (
+                            <div className="grid gap-4 py-2">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="phone">Phone Number *</Label>
+                                    <Input
+                                        id="phone"
+                                        placeholder="Enter employee phone number"
+                                        value={newEmployee.phone}
+                                        onChange={(e) => {
+                                            const phone = e.target.value;
+                                            setNewEmployee({ ...newEmployee, phone });
+                                            // Check if user exists after a short delay
+                                            const timer = setTimeout(() => checkUserExists(phone), 500);
+                                            return () => clearTimeout(timer);
+                                        }}
+                                        required
+                                    />
+                                    {isCheckingUser && <p className="text-muted-foreground text-xs animate-pulse">Checking if user exists...</p>}
+                                    
+                                    {userExists === true && foundUser && (
+                                        <div className={`rounded-md p-3 ${foundUser.isEmployee ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+                                            <p className={`text-sm font-semibold ${foundUser.isEmployee ? 'text-red-800' : 'text-green-800'}`}>
+                                                {foundUser.isEmployee ? '⚠ Already an Employee' : '✓ User Found: ' + foundUser.name}
+                                            </p>
+                                            <p className={`mt-1 text-xs ${foundUser.isEmployee ? 'text-red-600' : 'text-green-600'}`}>
+                                                {foundUser.isEmployee 
+                                                    ? `${foundUser.name} is already an employee of this company (Status: ${foundUser.employeeStatus})`
+                                                    : `${foundUser.email || 'This user'} will be linked to your company.`}
+                                            </p>
+                                            {foundUser.home_address && (
+                                                <p className="mt-2 text-[10px] text-green-700 font-medium">
+                                                    ✨ Smart Sync: Home address found and pre-filled.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                    
+                                    {userExists === false && (
+                                        <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
+                                            <p className="text-sm font-semibold text-amber-800">New User Account</p>
+                                            <p className="mt-1 text-xs text-amber-600">Please provide account details below.</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {userExists === false && (
                                     <>
-                                        {foundUser.isEmployee === true ? (
-                                            <div className="rounded-md bg-red-50 p-3">
-                                                <p className="text-sm font-semibold text-red-800">⚠ Already an Employee</p>
-                                                <p className="mt-1 text-xs text-red-600">
-                                                    <span className="font-semibold">{foundUser.name}</span> ({foundUser.email}) is already an employee
-                                                    of this company with status:{' '}
-                                                    <span className="font-semibold capitalize">{foundUser.employeeStatus}</span>
-                                                </p>
-                                                <p className="mt-2 text-xs text-red-700">
-                                                    You cannot add this user again. Please check the employees list or select a different phone
-                                                    number.
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div className="rounded-md bg-green-50 p-3">
-                                                <p className="text-sm font-semibold text-green-800">✓ User Found: {foundUser.name}</p>
-                                                <p className="mt-1 text-xs text-green-600">{foundUser.email} will be added as an employee.</p>
-                                            </div>
-                                        )}
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="name">Full Name *</Label>
+                                            <Input
+                                                id="name"
+                                                placeholder="Enter employee name"
+                                                value={newEmployee.name}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="email">Email (Optional)</Label>
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                placeholder="Enter employee email"
+                                                value={newEmployee.email}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="password">Password *</Label>
+                                            <Input
+                                                id="password"
+                                                type="password"
+                                                placeholder="Temporary password"
+                                                value={newEmployee.password}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                                                required
+                                            />
+                                        </div>
                                     </>
                                 )}
-                                {userExists === false && (
-                                    <div className="rounded-md bg-orange-50 p-3">
-                                        <p className="text-sm font-semibold text-orange-800">⚠ User not found</p>
-                                        <p className="mt-1 text-xs text-orange-600">
-                                            Please provide additional details below to create a new account.
-                                        </p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 py-2">
+                                <div className="grid gap-2">
+                                    <Label>Home Address *</Label>
+                                    <AddressAutocomplete
+                                        onAddressSelect={(address, lat, lng) => {
+                                            setNewEmployee({
+                                                ...newEmployee,
+                                                home_address: address,
+                                                home_lat: lat,
+                                                home_lng: lng,
+                                            });
+                                        }}
+                                        initialAddress={newEmployee.home_address}
+                                        placeholder="Search for employee's home address..."
+                                    />
+                                    <p className="text-muted-foreground text-[10px]">
+                                        Drivers will use this address as the default pickup/drop-off point.
+                                    </p>
+                                </div>
+                                {newEmployee.home_lat && (
+                                    <div className="flex items-center gap-2 rounded-md bg-green-50 p-2 text-[10px] text-green-700 border border-green-100">
+                                        <CheckCircle className="h-3 w-3" />
+                                        Location pinpointed: {newEmployee.home_lat.toFixed(4)}, {newEmployee.home_lng?.toFixed(4)}
                                     </div>
                                 )}
                             </div>
+                        )}
 
-                            {userExists === false && (
+                        <DialogFooter className="mt-4 gap-2 sm:gap-0">
+                            {addEmployeeStep === 1 ? (
                                 <>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="name">Full Name *</Label>
-                                        <Input
-                                            id="name"
-                                            placeholder="Enter employee name"
-                                            value={newEmployee.name}
-                                            onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="email">Email (Optional)</Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            placeholder="Enter employee email (optional)"
-                                            value={newEmployee.email}
-                                            onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="password">Password *</Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            placeholder="Enter temporary password"
-                                            value={newEmployee.password}
-                                            onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                                            required
-                                        />
-                                    </div>
+                                    <Button variant="outline" onClick={() => setIsAddEmployeeDialogOpen(false)}>Cancel</Button>
+                                    <Button 
+                                        onClick={() => setAddEmployeeStep(2)}
+                                        disabled={
+                                            !newEmployee.phone || 
+                                            isCheckingUser || 
+                                            foundUser?.isEmployee === true ||
+                                            (userExists === false && (!newEmployee.name || !newEmployee.password))
+                                        }
+                                    >
+                                        Next: Home Address
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button variant="outline" onClick={() => setAddEmployeeStep(1)}>Back</Button>
+                                    <Button 
+                                        onClick={handleAddEmployee}
+                                        disabled={isLoading || !newEmployee.home_address || !newEmployee.home_lat}
+                                    >
+                                        {isLoading ? 'Creating...' : 'Finish & Add Employee'}
+                                    </Button>
                                 </>
                             )}
-                        </div>
-                        <DialogFooter>
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    setIsAddEmployeeDialogOpen(false);
-                                    setNewEmployee({ phone: '', name: '', email: '', password: '' });
-                                    setUserExists(null);
-                                    setFoundUser(null);
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleAddEmployee}
-                                disabled={
-                                    isLoading ||
-                                    !newEmployee.phone ||
-                                    foundUser?.isEmployee === true ||
-                                    (userExists === false && (!newEmployee.name || !newEmployee.password))
-                                }
-                            >
-                                {isLoading ? 'Adding...' : 'Add Employee'}
-                            </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

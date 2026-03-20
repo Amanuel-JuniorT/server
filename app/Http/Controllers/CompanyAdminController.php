@@ -9,6 +9,7 @@ use App\Models\CompanyDriverContract;
 use App\Models\CompanyEmployee;
 use App\Models\CompanyGroupRideInstance;
 use App\Models\Driver;
+use App\Models\FavoriteLocation;
 use App\Models\User;
 use App\Services\CompanyRideAssignmentService;
 use Illuminate\Http\Request;
@@ -279,6 +280,9 @@ class CompanyAdminController extends Controller
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|email|unique:users,email',
             'password' => 'nullable|string|min:8',
+            'home_address' => 'required|string', // Mandatory for production ride tracking
+            'home_lat' => 'required|numeric',
+            'home_lng' => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -343,7 +347,22 @@ class CompanyAdminController extends Controller
                         'requested_at' => now(),
                         'approved_at' => now(),
                         'approved_by' => $admin->id,
+                        'home_address' => $request->home_address,
+                        'home_lat' => $request->home_lat,
+                        'home_lng' => $request->home_lng,
                     ]);
+
+                    // Sync to user's favorites as 'home' for future passenger-side use
+                    FavoriteLocation::updateOrCreate(
+                        ['user_id' => $user->id, 'type' => 'home'],
+                        [
+                            'address' => $request->home_address,
+                            'latitude' => $request->home_lat,
+                            'longitude' => $request->home_lng,
+                            'name' => 'Home',
+                            'is_active' => true
+                        ]
+                    );
 
                     $user->update([
                         'is_employee' => true,
@@ -384,6 +403,20 @@ class CompanyAdminController extends Controller
                     'requested_at' => now(),
                     'approved_at' => now(),
                     'approved_by' => $admin->id,
+                    'home_address' => $request->home_address,
+                    'home_lat' => $request->home_lat,
+                    'home_lng' => $request->home_lng,
+                ]);
+
+                // Also save as favorite
+                FavoriteLocation::create([
+                    'user_id' => $user->id,
+                    'type' => 'home',
+                    'address' => $request->home_address,
+                    'latitude' => $request->home_lat,
+                    'longitude' => $request->home_lng,
+                    'name' => 'Home',
+                    'is_active' => true
                 ]);
 
                 DB::commit();

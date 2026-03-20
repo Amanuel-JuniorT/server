@@ -19,12 +19,14 @@ export function AddressAutocomplete({
     placeholder,
     value,
     onChange,
+    onAddressChange,
     className,
 }: {
     label?: string;
     placeholder?: string;
     value?: AddressAutocompleteValue | null;
     onChange: (val: AddressAutocompleteValue | null) => void;
+    onAddressChange?: (address: string) => void;
     className?: string;
 }) {
     const [query, setQuery] = useState(value?.address ?? '');
@@ -92,7 +94,9 @@ export function AddressAutocomplete({
                     value={query}
                     placeholder={placeholder || 'Search address (Addis Ababa, Ethiopia)'}
                     onChange={(e) => {
-                        setQuery(e.target.value);
+                        const val = e.target.value;
+                        setQuery(val);
+                        if (onAddressChange) onAddressChange(val);
                     }}
                     onFocus={() => setOpen(true)}
                     onKeyDown={(e) => {

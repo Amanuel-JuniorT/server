@@ -148,10 +148,15 @@ Route::get('/users/check-phone', function (Request $request) {
         $user = \App\Models\User::whereIn('phone', array_unique($searchPhones))->first();
 
         if ($user) {
+            $homeLocation = $user->favorites()->where('type', 'home')->first();
+            
             $response = [
                 'exists' => true,
                 'name' => $user->name,
                 'email' => $user->email,
+                'home_address' => $homeLocation ? $homeLocation->address : null,
+                'home_lat' => $homeLocation ? $homeLocation->latitude : null,
+                'home_lng' => $homeLocation ? $homeLocation->longitude : null,
             ];
 
             if ($companyId) {
@@ -181,9 +186,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('wallet/validate-recipient/{phone}', [WalletController::class, 'getReceiver']);
     Route::get('wallet', [WalletController::class, 'index']);
     Route::get('wallet/transactions', [WalletController::class, 'transactions']);
-    Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
-    Route::post('wallet/topup', [WalletController::class, 'topup']);
-    Route::post('wallet/transfer', [WalletController::class, 'transfer']);
+    Route::post('wallet/withdraw', [WalletController::class, 'withdraw'])->middleware('throttle:5,1');
+    Route::post('wallet/topup', [WalletController::class, 'topup'])->middleware('throttle:10,1');
+    Route::post('wallet/transfer', [WalletController::class, 'transfer'])->middleware('throttle:10,1');
 
 
     // Notifications
@@ -257,6 +262,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/company-employees/{id}/approve', [AdminCompanyController::class, 'approveEmployee']);
     Route::post('/admin/company-employees/{id}/reject', [AdminCompanyController::class, 'rejectEmployee']);
     Route::get('/admin/company-stats', [AdminCompanyController::class, 'getCompanyStats']);
+    Route::put('/admin/company/{id}/billing', [AdminCompanyController::class, 'updateBilling']);
 
     // Company Driver Contracts
     Route::post('/company/{companyId}/contracts', [CompanyDriverContractController::class, 'store']);

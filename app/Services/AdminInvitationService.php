@@ -7,6 +7,7 @@ use App\Models\AdminInvitation;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AdminInvitationService
 {

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use App\Events\GlobalAdminNotification;
 
 class DriverProfileController extends Controller
@@ -383,8 +384,8 @@ class DriverProfileController extends Controller
                 'emergency_contact_phone' => $driver->emergency_contact_phone,
                 'approval_state' => $driver->approval_state ?? 'pending',
                 'status' => $driver->status,
-                'profile_picture_url' => $driver->profile_picture_path ? \Storage::url($driver->profile_picture_path) : null,
-                'license_image_url' => $driver->license_image_path ? \Storage::url($driver->license_image_path) : null,
+                'profile_picture_url' => $driver->profile_picture_path ? Storage::url($driver->profile_picture_path) : null,
+                'license_image_url' => $driver->license_image_path ? Storage::url($driver->license_image_path) : null,
                 // Flattened vehicle info
                 'vehicle_make' => $vehicle->make ?? null,
                 'vehicle_model' => $vehicle->model ?? null,
@@ -460,6 +461,8 @@ class DriverProfileController extends Controller
                     'total_ratings' => $totalRatings,
                     'wallet_balance' => $walletBalance,
                     'online_hours' => $onlineHours,
+                    'reliability_score' => (float) $driver->reliability_score,
+                    'no_show_count' => (int) $driver->no_show_count,
                 ]
             ]);
         } catch (\Exception $e) {
@@ -627,7 +630,7 @@ class DriverProfileController extends Controller
                     'id' => $document->id,
                     'type' => $document->document_type,
                     'status' => $document->status,
-                    'url' => \Storage::url($path)
+                    'url' => Storage::url($path)
                 ]
             ]);
         } catch (\Exception $e) {
@@ -660,7 +663,7 @@ class DriverProfileController extends Controller
                         'id' => $doc->id,
                         'type' => $doc->document_type,
                         'status' => $doc->status,
-                        'url' => \Storage::url($doc->file_path),
+                        'url' => Storage::url($doc->file_path),
                         'rejection_reason' => $doc->rejection_reason,
                         'uploaded_at' => $doc->uploaded_at
                     ];

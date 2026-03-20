@@ -35,7 +35,10 @@ class Driver extends Model
         'total_ratings',
         'rating_breakdown',
         'approval_state',
-        'reject_message'
+        'reject_message',
+        'reliability_score',
+        'no_show_count',
+        'corporate_agreed_version'
     ];
 
     public function documents()

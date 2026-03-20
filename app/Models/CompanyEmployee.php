@@ -45,6 +45,38 @@ class CompanyEmployee extends Model
   }
 
   /**
+   * The "booted" method of the model.
+   */
+  protected static function booted()
+  {
+      static::updated(function ($employee) {
+          // If status changed to 'left', remove from all ride groups
+          if ($employee->isDirty('status') && $employee->status === 'left') {
+              \Illuminate\Support\Facades\DB::table('company_ride_group_members')
+                  ->where('employee_id', $employee->user_id)
+                  ->whereIn('ride_group_id', function($query) use ($employee) {
+                      $query->select('id')
+                          ->from('company_ride_groups')
+                          ->where('company_id', $employee->company_id);
+                  })
+                  ->delete();
+          }
+      });
+
+      static::deleted(function ($employee) {
+          // If the relationship is deleted, also remove from ride groups
+          \Illuminate\Support\Facades\DB::table('company_ride_group_members')
+              ->where('employee_id', $employee->user_id)
+              ->whereIn('ride_group_id', function($query) use ($employee) {
+                  $query->select('id')
+                      ->from('company_ride_groups')
+                      ->where('company_id', $employee->company_id);
+              })
+              ->delete();
+      });
+  }
+
+  /**
    * Check if employee is currently active
    */
   public function isActive(): bool
