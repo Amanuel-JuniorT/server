@@ -12,6 +12,8 @@ class CompanyRideGroup extends Model
         'company_id',
         'group_name',
         'group_type',
+        'origin_type',
+        'destination_type',
         'pickup_address',
         'pickup_lat',
         'pickup_lng',
@@ -73,7 +75,7 @@ class CompanyRideGroup extends Model
         return $this->hasMany(CompanyGroupRideInstance::class, 'ride_group_id');
     }
 
-    public function addMember($employeeId, $pickupAddress = null, $lat = null, $lng = null)
+    public function addMember($employeeId, $pickupAddress = null, $pickupLat = null, $pickupLng = null, $destAddress = null, $destLat = null, $destLng = null)
     {
         if ($this->isFull()) {
             return false;
@@ -82,8 +84,11 @@ class CompanyRideGroup extends Model
         return $this->members()->create([
             'employee_id' => $employeeId,
             'pickup_address' => $pickupAddress,
-            'pickup_lat' => $lat,
-            'pickup_lng' => $lng,
+            'pickup_lat' => $pickupLat,
+            'pickup_lng' => $pickupLng,
+            'destination_address' => $destAddress,
+            'destination_lat' => $destLat,
+            'destination_lng' => $destLng,
         ]);
     }
 

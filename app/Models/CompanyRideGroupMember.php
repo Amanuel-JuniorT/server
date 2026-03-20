@@ -13,11 +13,16 @@ class CompanyRideGroupMember extends Model
         'pickup_address',
         'pickup_lat',
         'pickup_lng',
+        'destination_address',
+        'destination_lat',
+        'destination_lng',
     ];
 
     protected $casts = [
         'pickup_lat' => 'decimal:7',
         'pickup_lng' => 'decimal:7',
+        'destination_lat' => 'decimal:7',
+        'destination_lng' => 'decimal:7',
     ];
 
     public function rideGroup(): BelongsTo

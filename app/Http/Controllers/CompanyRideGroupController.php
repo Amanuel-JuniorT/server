@@ -74,7 +74,8 @@ class CompanyRideGroupController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'group_name'          => 'required|string|max:255',
-            'group_type'          => 'required|in:to_office,from_office',
+            'origin_type'         => 'required|in:office,home,custom',
+            'destination_type'    => 'required|in:office,home,custom',
             'pickup_address'      => 'sometimes|nullable|string',
             'pickup_lat'          => 'sometimes|nullable|numeric',
             'pickup_lng'          => 'sometimes|nullable|numeric',
@@ -89,9 +90,12 @@ class CompanyRideGroupController extends Controller
             'active_days.*'       => 'in:mon,tue,wed,thu,fri,sat,sun',
             'members'             => 'required|array|min:1|max:4',
             'members.*.employee_id' => 'required|exists:company_employees,id',
-            'members.*.address'     => 'required|string',
-            'members.*.latitude'    => 'required|numeric',
-            'members.*.longitude'   => 'required|numeric',
+            'members.*.address'     => 'nullable|string',
+            'members.*.latitude'    => 'nullable|numeric',
+            'members.*.longitude'   => 'nullable|numeric',
+            'members.*.dest_address'   => 'nullable|string',
+            'members.*.dest_latitude'  => 'nullable|numeric',
+            'members.*.dest_longitude' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -107,7 +111,9 @@ class CompanyRideGroupController extends Controller
             $group = CompanyRideGroup::create([
                 'company_id'          => $companyId,
                 'group_name'          => $request->group_name,
-                'group_type'          => $request->group_type,
+                'group_type'          => $request->group_type ?? 'to_office', // keep for compatibility
+                'origin_type'         => $request->origin_type,
+                'destination_type'    => $request->destination_type,
                 'pickup_address'      => $request->pickup_address,
                 'pickup_lat'          => $request->pickup_lat,
                 'pickup_lng'          => $request->pickup_lng,
@@ -131,9 +137,12 @@ class CompanyRideGroupController extends Controller
 
                 $group->addMember(
                     $employee->user_id,
-                    $member['address'],
-                    $member['latitude'],
-                    $member['longitude']
+                    $member['address'] ?? null,
+                    $member['latitude'] ?? null,
+                    $member['longitude'] ?? null,
+                    $member['dest_address'] ?? null,
+                    $member['dest_latitude'] ?? null,
+                    $member['dest_longitude'] ?? null
                 );
             }
 
@@ -190,11 +199,16 @@ class CompanyRideGroupController extends Controller
             'start_date' => 'sometimes|date',
             'end_date' => 'sometimes|date|after_or_equal:start_date',
             'status' => 'sometimes|in:active,inactive',
+            'origin_type' => 'sometimes|in:office,home,custom',
+            'destination_type' => 'sometimes|in:office,home,custom',
             'members' => 'sometimes|array|min:1|max:4',
             'members.*.employee_id' => 'required_with:members|exists:company_employees,id',
-            'members.*.address' => 'required_with:members|string',
-            'members.*.latitude' => 'required_with:members|numeric',
-            'members.*.longitude' => 'required_with:members|numeric',
+            'members.*.address' => 'nullable|string',
+            'members.*.latitude' => 'nullable|numeric',
+            'members.*.longitude' => 'nullable|numeric',
+            'members.*.dest_address' => 'nullable|string',
+            'members.*.dest_latitude' => 'nullable|numeric',
+            'members.*.dest_longitude' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -218,11 +232,13 @@ class CompanyRideGroupController extends Controller
                 'pickup_lng',
                 'destination_address',
                 'destination_lat',
-                'destination_lng',
+                'dest_longitude',
                 'scheduled_time',
                 'start_date',
                 'end_date',
-                'status'
+                'status',
+                'origin_type',
+                'destination_type',
             ]));
 
             // Sync members if provided
@@ -236,9 +252,12 @@ class CompanyRideGroupController extends Controller
 
                     $group->addMember(
                         $employee->user_id,
-                        $member['address'],
-                        $member['latitude'],
-                        $member['longitude']
+                        $member['address'] ?? null,
+                        $member['latitude'] ?? null,
+                        $member['longitude'] ?? null,
+                        $member['dest_address'] ?? null,
+                        $member['dest_latitude'] ?? null,
+                        $member['dest_longitude'] ?? null
                     );
                 }
             }

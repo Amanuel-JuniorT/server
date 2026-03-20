@@ -13,11 +13,20 @@ import SetupBanner from '@/components/company/setup-banner';
 import { Loader2, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 
 interface RideGroup {
     id: number;
     group_name: string;
-    group_type: 'to_office' | 'from_office';
+    group_type: string;
+    origin_type: 'office' | 'home' | 'custom';
+    destination_type: 'office' | 'home' | 'custom';
+    pickup_address: string;
+    pickup_lat: string;
+    pickup_lng: string;
+    destination_address: string;
+    destination_lat: string;
+    destination_lng: string;
     scheduled_time: string;
     start_date?: string;
     end_date?: string;
@@ -42,6 +51,9 @@ interface EmployeeMember {
     address: string;
     latitude: string;
     longitude: string;
+    dest_address?: string;
+    dest_latitude?: string;
+    dest_longitude?: string;
 }
 
 interface CompanyInfo {
@@ -76,7 +88,8 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
 
     const [formData, setFormData] = useState({
         group_name: '',
-        group_type: 'to_office' as 'to_office' | 'from_office',
+        origin_type: 'home' as 'office' | 'home' | 'custom',
+        destination_type: 'office' as 'office' | 'home' | 'custom',
         scheduled_time: '07:00',
         start_date: '',
         end_date: '',
@@ -166,6 +179,9 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                 address: employee.home_address || '',
                 latitude: employee.home_lat?.toString() || '',
                 longitude: employee.home_lng?.toString() || '',
+                dest_address: '',
+                dest_latitude: '',
+                dest_longitude: '',
             },
         ]);
     };
@@ -182,23 +198,32 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
         setEditingGroupId(group.id);
         setFormData({
             group_name: group.group_name,
-            group_type: group.group_type,
-            scheduled_time: group.scheduled_time.substring(0, 5), // Ensure HH:MM format
-            start_date: group.start_date || '', // Handle potentially missing dates for old records
+            origin_type: group.origin_type || (group.group_type === 'from_office' ? 'office' : 'home'),
+            destination_type: group.destination_type || (group.group_type === 'to_office' ? 'office' : 'home'),
+            scheduled_time: group.scheduled_time.substring(0, 5),
+            start_date: group.start_date || '',
             end_date: group.end_date || '',
             max_capacity: group.max_capacity,
+            pickup_address: group.pickup_address || '',
+            pickup_lat: group.pickup_lat?.toString() || '',
+            pickup_lng: group.pickup_lng?.toString() || '',
+            destination_address: group.destination_address || '',
+            destination_lat: group.destination_lat?.toString() || '',
+            destination_lng: group.destination_lng?.toString() || '',
         });
 
         // Map existing members to form format
         if (group.members) {
-            const mappedMembers = group.members.map((m: any) => ({
+            setSelectedEmployees(group.members.map((m: any) => ({
                 employee_id: m.employee_id,
                 name: m.employee.user.name,
-                address: m.custom_pickup_address,
-                latitude: m.custom_pickup_lat.toString(),
-                longitude: m.custom_pickup_lng.toString(),
-            }));
-            setSelectedEmployees(mappedMembers);
+                address: m.pickup_address || '',
+                latitude: m.pickup_lat?.toString() || '',
+                longitude: m.pickup_lng?.toString() || '',
+                dest_address: m.destination_address || '',
+                dest_latitude: m.destination_lat?.toString() || '',
+                dest_longitude: m.destination_lng?.toString() || '',
+            })));
         } else {
             setSelectedEmployees([]);
         }
@@ -220,11 +245,20 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
             return;
         }
 
-        // Validate that all employees have addresses
-        const missingAddresses = selectedEmployees.filter((e) => !e.address || !e.latitude || !e.longitude);
-        if (missingAddresses.length > 0) {
-            toast.error('Please provide address and coordinates for all employees');
-            return;
+        // Validate that all employees have addresses if types are 'home'
+        if (formData.origin_type === 'home') {
+            const missing = selectedEmployees.filter((e) => !e.address || !e.latitude || !e.longitude);
+            if (missing.length > 0) {
+                toast.error('Please provide pickup address for all employees');
+                return;
+            }
+        }
+        if (formData.destination_type === 'home') {
+            const missing = selectedEmployees.filter((e) => !e.dest_address || !e.dest_latitude || !e.dest_longitude);
+            if (missing.length > 0) {
+                toast.error('Please provide destination address for all employees');
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -243,17 +277,23 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                 },
                 body: JSON.stringify({
                     ...formData,
-                    // If To Office, group pickup is the first employee's address, destination is office
-                    pickup_address: formData.group_type === 'to_office' ? selectedEmployees[0].address : (companyInfo?.address || ''),
-                    pickup_lat: formData.group_type === 'to_office' ? selectedEmployees[0].latitude : (companyInfo?.latitude?.toString() || ''),
-                    pickup_lng: formData.group_type === 'to_office' ? selectedEmployees[0].longitude : (companyInfo?.longitude?.toString() || ''),
+                    // The backend now accepts origin_type and destination_type.
+                    // We calculate the group-level pickup/destination for instances where they are fixed (Office or Custom)
+                    pickup_address: formData.origin_type === 'office' ? (companyInfo?.address || '') : formData.pickup_address,
+                    pickup_lat: formData.origin_type === 'office' ? (companyInfo?.latitude?.toString() || '') : formData.pickup_lat,
+                    pickup_lng: formData.origin_type === 'office' ? (companyInfo?.longitude?.toString() || '') : formData.pickup_lng,
 
-                    // If From Office, group pickup is office, destination is the first employee's home
-                    destination_address: formData.group_type === 'from_office' ? selectedEmployees[0].address : (companyInfo?.address || ''),
-                    destination_lat: formData.group_type === 'from_office' ? selectedEmployees[0].latitude : (companyInfo?.latitude?.toString() || ''),
-                    destination_lng: formData.group_type === 'from_office' ? selectedEmployees[0].longitude : (companyInfo?.longitude?.toString() || ''),
+                    destination_address: formData.destination_type === 'office' ? (companyInfo?.address || '') : formData.destination_address,
+                    destination_lat: formData.destination_type === 'office' ? (companyInfo?.latitude?.toString() || '') : formData.destination_lat,
+                    destination_lng: formData.destination_type === 'office' ? (companyInfo?.longitude?.toString() || '') : formData.destination_lng,
 
-                    members: selectedEmployees,
+                    members: selectedEmployees.map(m => ({
+                        ...m,
+                        // Ensure we send expected field names to the controller
+                        dest_address: m.dest_address,
+                        dest_latitude: m.dest_latitude,
+                        dest_longitude: m.dest_longitude
+                    })),
                 }),
             });
 
@@ -341,11 +381,18 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
     const resetForm = () => {
         setFormData({
             group_name: '',
-            group_type: 'to_office',
+            origin_type: 'home',
+            destination_type: 'office',
             scheduled_time: '07:00',
             start_date: '',
             end_date: '',
             max_capacity: 4,
+            pickup_address: '',
+            pickup_lat: '',
+            pickup_lng: '',
+            destination_address: '',
+            destination_lat: '',
+            destination_lng: '',
         });
         setSelectedEmployees([]);
         setEditingGroupId(null);
@@ -391,26 +438,79 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                         />
                                     </div>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="group_type">Type</Label>
-                                        <Select
-                                            value={formData.group_type}
-                                            onValueChange={(value: 'to_office' | 'from_office') => setFormData({ ...formData, group_type: value })}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="to_office">To Office (Morning)</SelectItem>
-                                                <SelectItem value="from_office">From Office (Evening)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-muted-foreground text-sm">
-                                            {formData.group_type === 'to_office'
-                                                ? 'Office address will be used as destination'
-                                                : 'Office address will be used as pickup point'}
-                                        </p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-2">
+                                            <Label>From</Label>
+                                            <Select
+                                                value={formData.origin_type}
+                                                onValueChange={(value: 'office' | 'home' | 'custom') => setFormData({ ...formData, origin_type: value })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="office">Office ({companyInfo?.name})</SelectItem>
+                                                    <SelectItem value="home">Employee Home (Multiple)</SelectItem>
+                                                    <SelectItem value="custom">Custom Location</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label>To</Label>
+                                            <Select
+                                                value={formData.destination_type}
+                                                onValueChange={(value: 'office' | 'home' | 'custom') => setFormData({ ...formData, destination_type: value })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="office">Office ({companyInfo?.name})</SelectItem>
+                                                    <SelectItem value="home">Employee Home (Multiple)</SelectItem>
+                                                    <SelectItem value="custom">Custom Location</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
+
+                                    {formData.origin_type === 'custom' && (
+                                        <div className="grid gap-2">
+                                            <Label>Global Pickup Point (Origin)</Label>
+                                            <AddressAutocomplete
+                                                value={{
+                                                    address: formData.pickup_address,
+                                                    lat: parseFloat(formData.pickup_lat) || 0,
+                                                    lng: parseFloat(formData.pickup_lng) || 0
+                                                }}
+                                                onChange={(val) => setFormData({
+                                                    ...formData,
+                                                    pickup_address: val?.address || '',
+                                                    pickup_lat: val?.lat.toString() || '',
+                                                    pickup_lng: val?.lng.toString() || ''
+                                                })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {formData.destination_type === 'custom' && (
+                                        <div className="grid gap-2">
+                                            <Label>Global Destination Point</Label>
+                                            <AddressAutocomplete
+                                                value={{
+                                                    address: formData.destination_address,
+                                                    lat: parseFloat(formData.destination_lat) || 0,
+                                                    lng: parseFloat(formData.destination_lng) || 0
+                                                }}
+                                                onChange={(val) => setFormData({
+                                                    ...formData,
+                                                    destination_address: val?.address || '',
+                                                    destination_lat: val?.lat.toString() || '',
+                                                    destination_lng: val?.lng.toString() || ''
+                                                })}
+                                            />
+                                        </div>
+                                    )}
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="scheduled_time">Scheduled Time</Label>
@@ -486,48 +586,48 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                                             </Button>
                                                         </div>
                                                     </CardHeader>
-                                                    <CardContent className="space-y-3">
-                                                        <div>
-                                                            <Label>
-                                                                {formData.group_type === 'to_office'
-                                                                    ? 'Home Address (Pickup)'
-                                                                    : 'Home Address (Destination)'}
-                                                            </Label>
-                                                            <Input
-                                                                value={member.address}
-                                                                onChange={(e) =>
-                                                                    handleEmployeeAddressChange(member.employee_id, 'address', e.target.value)
-                                                                }
-                                                                placeholder="Enter employee's home address"
-                                                                required
-                                                            />
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <div>
-                                                                <Label>Latitude</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    step="0.0000001"
-                                                                    value={member.latitude}
-                                                                    onChange={(e) =>
-                                                                        handleEmployeeAddressChange(member.employee_id, 'latitude', e.target.value)
-                                                                    }
-                                                                    required
+                                                    <CardContent className="space-y-4">
+                                                        {formData.origin_type === 'home' && (
+                                                            <div className="grid gap-2">
+                                                                <Label>Pickup Point (Home)</Label>
+                                                                <AddressAutocomplete
+                                                                    value={{
+                                                                        address: member.address,
+                                                                        lat: parseFloat(member.latitude) || 0,
+                                                                        lng: parseFloat(member.longitude) || 0
+                                                                    }}
+                                                                    onChange={(val) => {
+                                                                        handleEmployeeAddressChange(member.employee_id, 'address', val?.address || '');
+                                                                        handleEmployeeAddressChange(member.employee_id, 'latitude', val?.lat.toString() || '');
+                                                                        handleEmployeeAddressChange(member.employee_id, 'longitude', val?.lng.toString() || '');
+                                                                    }}
                                                                 />
                                                             </div>
-                                                            <div>
-                                                                <Label>Longitude</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    step="0.0000001"
-                                                                    value={member.longitude}
-                                                                    onChange={(e) =>
-                                                                        handleEmployeeAddressChange(member.employee_id, 'longitude', e.target.value)
-                                                                    }
-                                                                    required
+                                                        )}
+
+                                                        {formData.destination_type === 'home' && (
+                                                            <div className="grid gap-2">
+                                                                <Label>Drop-off Point (Home)</Label>
+                                                                <AddressAutocomplete
+                                                                    value={{
+                                                                        address: member.dest_address || '',
+                                                                        lat: parseFloat(member.dest_latitude || '') || 0,
+                                                                        lng: parseFloat(member.dest_longitude || '') || 0
+                                                                    }}
+                                                                    onChange={(val) => {
+                                                                        handleEmployeeAddressChange(member.employee_id, 'dest_address', val?.address || '');
+                                                                        handleEmployeeAddressChange(member.employee_id, 'dest_latitude', val?.lat.toString() || '');
+                                                                        handleEmployeeAddressChange(member.employee_id, 'dest_longitude', val?.lng.toString() || '');
+                                                                    }}
                                                                 />
                                                             </div>
-                                                        </div>
+                                                        )}
+
+                                                        {formData.origin_type !== 'home' && formData.destination_type !== 'home' && (
+                                                            <div className="text-sm text-muted-foreground flex items-center justify-center py-2 h-10 border rounded bg-muted/30">
+                                                                No individual addresses needed for this route type.
+                                                            </div>
+                                                        )}
                                                     </CardContent>
                                                 </Card>
                                             ))}
@@ -585,7 +685,10 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                         <TableRow key={group.id}>
                                             <TableCell className="font-medium">{group.group_name}</TableCell>
                                             <TableCell>
-                                                <span className="capitalize">{group.group_type.replace('_', ' ')}</span>
+                                                <div className="flex flex-col text-xs space-y-1">
+                                                    <span className="font-medium capitalize">{group.origin_type} → {group.destination_type}</span>
+                                                    <span className="text-muted-foreground truncate max-w-[150px]">{group.pickup_address}</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>{group.scheduled_time}</TableCell>
                                             <TableCell className="text-muted-foreground text-sm whitespace-nowrap">

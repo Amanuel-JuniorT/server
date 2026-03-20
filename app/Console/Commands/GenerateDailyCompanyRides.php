@@ -68,20 +68,27 @@ class GenerateDailyCompanyRides extends Command
                     'accepted_at'         => $assignment->driver_id ? now() : null,
                 ]);
                 $count++;
-            } else {
                 // Create one instance per group member
                 foreach ($members as $member) {
+                    $originLat = ($group->origin_type === 'home') ? ($member->pickup_lat ?? $group->pickup_lat) : $group->pickup_lat;
+                    $originLng = ($group->origin_type === 'home') ? ($member->pickup_lng ?? $group->pickup_lng) : $group->pickup_lng;
+                    $pickupAdd = ($group->origin_type === 'home') ? ($member->pickup_address ?? $group->pickup_address) : $group->pickup_address;
+
+                    $destLat = ($group->destination_type === 'home') ? ($member->destination_lat ?? $group->destination_lat) : $group->destination_lat;
+                    $destLng = ($group->destination_type === 'home') ? ($member->destination_lng ?? $group->destination_lng) : $group->destination_lng;
+                    $destAdd = ($group->destination_type === 'home') ? ($member->destination_address ?? $group->destination_address) : $group->destination_address;
+
                     \App\Models\CompanyGroupRideInstance::create([
                         'company_id'          => $group->company_id,
                         'employee_id'         => $member->employee_id,
                         'ride_group_id'       => $group->id,
                         'driver_id'           => $assignment->driver_id,
-                        'origin_lat'          => $member->pickup_lat ?? $group->pickup_lat,
-                        'origin_lng'          => $member->pickup_lng ?? $group->pickup_lng,
-                        'destination_lat'     => $group->destination_lat,
-                        'destination_lng'     => $group->destination_lng,
-                        'pickup_address'      => $member->pickup_address ?? $group->pickup_address,
-                        'destination_address' => $group->destination_address,
+                        'origin_lat'          => $originLat,
+                        'origin_lng'          => $originLng,
+                        'destination_lat'     => $destLat,
+                        'destination_lng'     => $destLng,
+                        'pickup_address'      => $pickupAdd,
+                        'destination_address' => $destAdd,
                         'scheduled_time'      => $scheduledTime,
                         'status'              => $assignment->driver_id ? 'accepted' : 'requested',
                         'requested_at'        => now(),
