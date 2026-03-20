@@ -13,7 +13,7 @@ import { Building2, Check, CheckCircle, Clock, Eye, RefreshCw, Trash2, Upload, U
 import { useState } from 'react';
 import { toast } from 'sonner';
 import SetupBanner from '@/components/company/setup-banner';
-import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 
 interface CompanyEmployee {
     id: number;
@@ -787,16 +787,33 @@ export default function CompanyAdminEmployeesPage() {
                                 <div className="grid gap-2">
                                     <Label>Home Address *</Label>
                                     <AddressAutocomplete
-                                        onAddressSelect={(address, lat, lng) => {
+                                        placeholder="Search for employee's home address..."
+                                        value={
+                                            newEmployee.home_address
+                                                ? {
+                                                      address: newEmployee.home_address,
+                                                      lat: newEmployee.home_lat || 0,
+                                                      lng: newEmployee.home_lng || 0,
+                                                  }
+                                                : null
+                                        }
+                                        onChange={(val) => {
+                                            if (!val) {
+                                                setNewEmployee({
+                                                    ...newEmployee,
+                                                    home_address: '',
+                                                    home_lat: null,
+                                                    home_lng: null,
+                                                });
+                                                return;
+                                            }
                                             setNewEmployee({
                                                 ...newEmployee,
-                                                home_address: address,
-                                                home_lat: lat,
-                                                home_lng: lng,
+                                                home_address: val.address,
+                                                home_lat: val.lat,
+                                                home_lng: val.lng,
                                             });
                                         }}
-                                        initialAddress={newEmployee.home_address}
-                                        placeholder="Search for employee's home address..."
                                     />
                                     <p className="text-muted-foreground text-[10px]">
                                         Drivers will use this address as the default pickup/drop-off point.
