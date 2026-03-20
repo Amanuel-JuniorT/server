@@ -271,8 +271,12 @@ export default function CompanyAdminProfilePage() {
                                         variant="outline"
                                         size="sm"
                                         onClick={async () => {
+                                            if (!window.isSecureContext) {
+                                                toast.error('Geolocation requires a secure connection (HTTPS)');
+                                                return;
+                                            }
                                             if (!navigator.geolocation) {
-                                                toast.error('Geolocation not supported');
+                                                toast.error('Geolocation not supported by your browser');
                                                 return;
                                             }
                                             navigator.geolocation.getCurrentPosition(
@@ -307,7 +311,14 @@ export default function CompanyAdminProfilePage() {
                                                         toast.success('Coordinates captured');
                                                     }
                                                 },
-                                                () => toast.error('Failed to get current location')
+                                                (err) => {
+                                                    console.error('Geolocation error:', err);
+                                                    if (err.code === 1) { // PERMISSION_DENIED
+                                                        toast.error('Location access denied. Please enable it in browser settings.');
+                                                    } else {
+                                                        toast.error('Failed to get current location. Ensure you are using HTTPS.');
+                                                    }
+                                                }
                                             );
                                         }}
                                     >
