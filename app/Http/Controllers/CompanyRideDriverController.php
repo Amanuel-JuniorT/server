@@ -132,7 +132,13 @@ class CompanyRideDriverController extends Controller
 
       $ride = CompanyGroupRideInstance::with(['company', 'employee', 'rideGroup.members.employee'])
         ->where('id', $id)
-        ->where('driver_id', $driver->id)
+        ->where(function ($query) use ($driver) {
+            $query->where('driver_id', $driver->id)
+                  ->orWhere(function ($q) {
+                      $q->whereNull('driver_id')
+                        ->where('status', 'requested');
+                  });
+        })
         ->first();
 
       if (!$ride) {
