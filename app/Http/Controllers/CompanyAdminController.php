@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Events\RideScheduled;
 use App\Jobs\RetryCompanyRideAssignment;
 use App\Models\Company;
-use App\Models\CompanyDriverContract;
 use App\Models\CompanyEmployee;
 use App\Models\CompanyGroupRideInstance;
 use App\Models\Driver;

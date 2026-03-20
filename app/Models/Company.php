@@ -77,26 +77,6 @@ class Company extends Model
     return $this->hasMany(CompanyGroupRideInstance::class);
   }
 
-  public function driverContracts(): HasMany
-  {
-    return $this->hasMany(CompanyDriverContract::class);
-  }
-
-  /**
-   * Get contracted drivers (through active contracts)
-   */
-  public function contractedDrivers()
-  {
-    return $this->belongsToMany(Driver::class, 'company_driver_contracts', 'company_id', 'driver_id')
-      ->wherePivot('status', 'active')
-      ->wherePivot('start_date', '<=', now()->toDateString())
-      ->where(function ($query) {
-        $query->whereNull('company_driver_contracts.end_date')
-          ->orWhere('company_driver_contracts.end_date', '>=', now()->toDateString());
-      })
-      ->withTimestamps();
-  }
-
   /**
    * Generate a unique company code
    */

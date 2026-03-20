@@ -10,7 +10,6 @@ use App\Models\Ride;
 use App\Models\Company;
 use App\Models\CompanyGroupRideInstance;
 use App\Models\CompanyEmployee;
-use App\Models\CompanyDriverContract;
 use Inertia\Inertia;
 use App\Models\AuditLog;
 use App\Services\AuditService;
@@ -156,52 +155,7 @@ class AdminDashboardController extends Controller
      */
     public function assignDriverToCompany(Request $request, $companyId)
     {
-        $validator = Validator::make($request->all(), [
-            'driver_id' => 'required|exists:drivers,id',
-            'contract_start_date' => 'required|date|after_or_equal:today',
-            'contract_end_date' => 'nullable|date|after:contract_start_date',
-            'status' => 'required|in:active,pending',
-            'terms' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        try {
-            $company = Company::findOrFail($companyId);
-            $driver = Driver::findOrFail($request->driver_id);
-
-            // Check if driver is approved
-            if ($driver->approval_state !== 'approved') {
-                return redirect()->back()->with('error', 'Driver must be approved before assignment.');
-            }
-
-            // Check if contract already exists
-            $existingContract = CompanyDriverContract::where('company_id', $companyId)
-                ->where('driver_id', $driver->id)
-                ->where('status', 'active')
-                ->first();
-
-            if ($existingContract) {
-                return redirect()->back()->with('error', 'This driver already has an active contract with this company.');
-            }
-
-            $contract = CompanyDriverContract::create([
-                'company_id' => $companyId,
-                'driver_id' => $driver->id,
-                'status' => $request->status,
-                'contract_start_date' => $request->contract_start_date,
-                'contract_end_date' => $request->contract_end_date,
-                'terms' => $request->terms,
-            ]);
-
-            AuditService::medium('Driver Assigned to Company', $contract, "Assigned driver {$driver->user->name} to {$company->name}");
-
-            return redirect()->back()->with('success', 'Driver assigned to company successfully!');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to assign driver: ' . $e->getMessage());
-        }
+        abort(404, 'Direct driver assignment is deprecated. Drivers now use platform-wide agreements.');
     }
 
     /**
@@ -798,14 +752,7 @@ class AdminDashboardController extends Controller
             'completed_rides' => CompanyGroupRideInstance::where('company_id', $id)->where('status', 'completed')->count(),
             'in_progress_rides' => CompanyGroupRideInstance::where('company_id', $id)->where('status', 'in_progress')->count(),
             'requested_rides' => CompanyGroupRideInstance::where('company_id', $id)->where('status', 'requested')->count(),
-            'total_drivers' => CompanyDriverContract::where('company_id', $id)
-                ->where('status', 'active')
-                ->where('start_date', '<=', now())
-                ->where(function ($query) {
-                    $query->whereNull('end_date')
-                        ->orWhere('end_date', '>=', now());
-                })
-                ->count(),
+            'total_drivers' => 0,
         ];
 
         // Get recent rides
@@ -816,23 +763,7 @@ class AdminDashboardController extends Controller
             ->get();
 
         // Get active drivers
-        $activeDrivers = CompanyDriverContract::with(['driver.user', 'driver.vehicle'])
-            ->where('company_id', $id)
-            ->where('status', 'active')
-            ->where('start_date', '<=', now())
-            ->where(function ($query) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', now());
-            })
-            ->get()
-            ->map(function ($contract) {
-                return [
-                    'id' => $contract->driver->id,
-                    'name' => $contract->driver->user->name ?? 'Unknown',
-                    'status' => $contract->driver->status,
-                    'license_number' => $contract->driver->license_number,
-                ];
-            });
+        $activeDrivers = [];
 
         return Inertia::render('company/profile', [
             'company' => $company,
@@ -868,53 +799,15 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-    /**
-     * Get company drivers for a specific company
-     */
     public function companyDriversView($id)
     {
         $company = Company::findOrFail($id);
 
-        $contracts = CompanyDriverContract::with(['driver.user', 'driver.vehicle'])
-            ->where('company_id', $id)
-            ->where('status', 'active')
-            ->where('start_date', '<=', now())
-            ->where(function ($query) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', now());
-            })
-            ->get();
-
-        $drivers = $contracts->map(function ($contract) {
-            $driver = $contract->driver;
-            $user = $driver->user ?? null;
-
-            return [
-                'id' => $driver->id,
-                'name' => $user->name ?? 'Unknown',
-                'email' => $user->email ?? '',
-                'phone' => $user->phone ?? '',
-                'license_number' => $driver->license_number ?? '',
-                'status' => $driver->status ?? 'unknown',
-                'approval_state' => $driver->approval_state ?? 'unknown',
-                'vehicle' => $driver->vehicle ? [
-                    'make' => $driver->vehicle->make,
-                    'model' => $driver->vehicle->model,
-                    'plate_number' => $driver->vehicle->plate_number,
-                    'color' => $driver->vehicle->color,
-                ] : null,
-                'contract' => [
-                    'id' => $contract->id,
-                    'start_date' => $contract->start_date,
-                    'end_date' => $contract->end_date,
-                ],
-            ];
-        });
-
+        $drivers = [];
         $stats = [
-            'total_drivers' => $drivers->count(),
-            'available_drivers' => $drivers->where('status', 'available')->count(),
-            'on_ride_drivers' => $drivers->where('status', 'on_ride')->count(),
+            'total_drivers' => 0,
+            'available_drivers' => 0,
+            'on_ride_drivers' => 0,
         ];
 
         return Inertia::render('company/drivers', [

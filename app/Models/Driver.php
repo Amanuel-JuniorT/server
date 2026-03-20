@@ -66,8 +66,8 @@ class Driver extends Model
         return $this->hasMany(CompanyGroupRideInstance::class);
     }
 
-    public function companyContracts()
+    public function agreements()
     {
-        return $this->hasMany(CompanyDriverContract::class);
+        return $this->hasMany(DriverAgreement::class);
     }
 }

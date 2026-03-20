@@ -13,7 +13,7 @@ use App\Http\Controllers\Wallet_Controller;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyRideDriverController;
 use App\Http\Controllers\CompanyRideAdminController;
-use App\Http\Controllers\CompanyDriverContractController;
+use App\Http\Controllers\DriverAgreementController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\EmployeeController;
@@ -264,12 +264,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/admin/company-stats', [AdminCompanyController::class, 'getCompanyStats']);
     Route::put('/admin/company/{id}/billing', [AdminCompanyController::class, 'updateBilling']);
 
-    // Company Driver Contracts
-    Route::post('/company/{companyId}/contracts', [CompanyDriverContractController::class, 'store']);
-    Route::get('/company/{companyId}/contracts', [CompanyDriverContractController::class, 'index']);
-    Route::get('/company/{companyId}/contracts/active', [CompanyDriverContractController::class, 'activeContracts']);
-    Route::put('/contracts/{id}', [CompanyDriverContractController::class, 'update']);
-    Route::get('/driver/contracts', [CompanyDriverContractController::class, 'driverContracts']);
+    // Driver Agreements
+    Route::get('/driver/agreement/status', [DriverAgreementController::class, 'checkStatus']);
+    Route::post('/driver/agreement/accept', [DriverAgreementController::class, 'accept']);
 
     // Company Ride Groups
     Route::get('/admin/company/{companyId}/ride-groups', [CompanyRideGroupController::class, 'index']);
