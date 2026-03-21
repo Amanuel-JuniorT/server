@@ -149,6 +149,31 @@ class CompanyRideDriverController extends Controller
 
           if ($assignment) {
               $group = $assignment->rideGroup;
+              $daysOfWeek = $assignment->days_of_week; // Array of strings: ['monday', 'tuesday', ...]
+              $scheduledTime = $group->scheduled_time; // Carbon instance or string H:i:s
+              
+              // Calculate Next Ride
+              $now = now();
+              $todayName = strtolower($now->format('l'));
+              $isToday = in_array($todayName, $daysOfWeek);
+              
+              $nextRideDate = null;
+              if ($isToday) {
+                  // If scheduled time has already passed today, the next ride is next week (or another day)
+                  // but for the sake of the "Main" display, we say Today is the next ride.
+                  $nextRideDate = $now->toDateString();
+              } else {
+                  // Find the next available day in the week
+                  for ($i = 1; $i <= 7; $i++) {
+                      $checkDate = $now->copy()->addDays($i);
+                      $checkDayName = strtolower($checkDate->format('l'));
+                      if (in_array($checkDayName, $daysOfWeek)) {
+                          $nextRideDate = $checkDate->toDateString();
+                          break;
+                      }
+                  }
+              }
+
               // Synthesize a virtual ride object for the detail page
               $ride = [
                   'id' => $assignment->id, // Use assignment ID so "Enroll" works
@@ -171,6 +196,8 @@ class CompanyRideDriverController extends Controller
                   'days_of_week' => $assignment->days_of_week,
                   'ride_group' => $group,
                   'scheduled_time' => $group->scheduled_time,
+                  'next_ride_date' => $nextRideDate,
+                  'is_today' => $isToday,
                   'created_at' => $assignment->created_at->toIso8601String(),
               ];
           }

@@ -101,6 +101,19 @@ class DispatchRideJob implements ShouldQueue
             $query->whereNotIn('drivers.id', $excludedDrivers);
         }
 
+        // Filter out drivers who are enrolled in a company ride starting soon
+        $soonMinutes = 45; 
+        $query->whereNotExists(function ($q) use ($soonMinutes) {
+            $q->select(DB::raw(1))
+                ->from('company_group_ride_instances')
+                ->whereColumn('company_group_ride_instances.driver_id', 'drivers.id')
+                ->whereIn('company_group_ride_instances.status', ['accepted', 'in_progress'])
+                ->whereBetween('company_group_ride_instances.scheduled_time', [
+                    now()->subMinutes(15), 
+                    now()->addMinutes($soonMinutes)
+                ]);
+        });
+
         $nearbyDriver = $query->selectRaw("
                 (6371 * acos(cos(radians(?)) * cos(radians(locations.latitude)) * 
                 cos(radians(locations.longitude) - radians(?)) + sin(radians(?)) * 
