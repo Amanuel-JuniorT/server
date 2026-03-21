@@ -68,6 +68,7 @@ class GenerateDailyCompanyRides extends Command
                     'accepted_at'         => $assignment->driver_id ? now() : null,
                 ]);
                 $count++;
+            } else {
                 // Create one instance per group member
                 foreach ($members as $member) {
                     $originLat = ($group->origin_type === 'home') ? ($member->pickup_lat ?? $group->pickup_lat) : $group->pickup_lat;
