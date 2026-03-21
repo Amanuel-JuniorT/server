@@ -136,7 +136,7 @@ class CompanyRideDriverController extends Controller
             $query->where('driver_id', $driver->id)
                   ->orWhere(function ($q) {
                       $q->whereNull('driver_id')
-                        ->where('status', 'requested');
+                        ->whereIn('status', ['requested', 'marketplace_pending']);
                   });
         })
         ->first();
@@ -144,7 +144,9 @@ class CompanyRideDriverController extends Controller
       if (!$ride) {
         return response()->json([
           'success' => false,
-          'message' => 'Ride not found or not assigned to you'
+          'message' => 'Ride not found, not assigned to you, or not in marketplace. (v2)',
+          'debug_driver_id' => $driver->id,
+          'debug_ride_id' => $id
         ], 404);
       }
 
