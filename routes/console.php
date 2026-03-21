@@ -17,6 +17,7 @@ Schedule::call(function () {
 Schedule::command('company:generate-rides')->dailyAt('00:01');
 
 // Schedule check for scheduled ride notifications
+Schedule::command('rides:remind-company')->everyMinute();
 Schedule::command('rides:check-scheduled')->everyMinute();
 
 Schedule::command('rides:expire')->everyMinute();

@@ -32,6 +32,10 @@ class CompanyGroupRideInstance extends Model
     'opted_out_employees',
     'cancelled_by',
     'cancellation_reason',
+    'reminder_2h_sent',
+    'reminder_1h_sent',
+    'reminder_go_sent',
+    'aboard_employees',
   ];
 
   protected $casts = [
@@ -46,6 +50,10 @@ class CompanyGroupRideInstance extends Model
     'started_at' => 'datetime',
     'completed_at' => 'datetime',
     'opted_out_employees' => 'array',
+    'aboard_employees' => 'array',
+    'reminder_2h_sent' => 'boolean',
+    'reminder_1h_sent' => 'boolean',
+    'reminder_go_sent' => 'boolean',
   ];
 
   protected $appends = [
@@ -98,6 +106,27 @@ class CompanyGroupRideInstance extends Model
     if (!in_array($userId, $current)) {
       $current[] = $userId;
       $this->opted_out_employees = $current;
+      $this->save();
+    }
+  }
+
+  /**
+   * Check if a given user is marked as aboard for this ride instance.
+   */
+  public function isEmployeeAboard(int $userId): bool
+  {
+    return in_array($userId, $this->aboard_employees ?? []);
+  }
+
+  /**
+   * Mark a user as aboard for this instance.
+   */
+  public function markAboard(int $userId): void
+  {
+    $current = $this->aboard_employees ?? [];
+    if (!in_array($userId, $current)) {
+      $current[] = $userId;
+      $this->aboard_employees = $current;
       $this->save();
     }
   }

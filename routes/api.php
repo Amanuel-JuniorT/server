@@ -224,6 +224,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/driver/company-ride/{id}/accept', [CompanyRideDriverController::class, 'acceptRide']);
     Route::post('/driver/company-ride/{id}/start', [CompanyRideDriverController::class, 'startRide']);
     Route::post('/driver/company-ride/{id}/arrived', [CompanyRideDriverController::class, 'arrived']);
+    Route::post('/driver/company-ride/{id}/member/{memberId}/aboard', [CompanyRideDriverController::class, 'markMemberAboard']);
     Route::post('/driver/company-ride/{id}/complete', [CompanyRideDriverController::class, 'completeRide']);
     Route::post('/driver/company-ride/{id}/cancel', [CompanyRideDriverController::class, 'cancelRide']);
 

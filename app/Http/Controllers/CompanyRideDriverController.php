@@ -162,9 +162,15 @@ class CompanyRideDriverController extends Controller
                   'destination_lat' => (double) $group->destination_lat,
                   'destination_lng' => (double) $group->destination_lng,
                   'status' => ($assignment->driver_id == $driver->id) ? 'enrolled' : 'enrollment_available',
-                  'company' => $assignment->company,
+                  'company' => [
+                      'id' => $assignment->company->id,
+                      'name' => $assignment->company->name,
+                      'phone' => $assignment->company->phone,
+                      'address' => $assignment->company->address,
+                  ],
+                  'days_of_week' => $assignment->days_of_week,
                   'ride_group' => $group,
-                  'scheduled_time' => $group->scheduled_time ? $group->scheduled_time->format('H:i') : null,
+                  'scheduled_time' => $group->scheduled_time,
                   'created_at' => $assignment->created_at->toIso8601String(),
               ];
           }
@@ -665,4 +671,52 @@ class CompanyRideDriverController extends Controller
       ], 500);
     }
   }
+  /**
+   * Mark an employee as aboard for a company ride instance
+   */
+  public function markMemberAboard(Request $request, $id, $memberId)
+  {
+    try {
+      $user = $request->user();
+      $driver = $user->driver;
+
+      if (!$driver) {
+        return response()->json(['success' => false, 'message' => 'User is not a driver'], 403);
+      }
+
+      $ride = CompanyGroupRideInstance::where('id', $id)
+        ->where('driver_id', $driver->id)
+        ->whereIn('status', ['accepted', 'in_progress'])
+        ->first();
+
+      if (!$ride) {
+        return response()->json(['success' => false, 'message' => 'Ride not found or not assigned to you'], 404);
+      }
+
+      // Mark the member as aboard
+      $ride->markAboard($memberId);
+
+      return response()->json([
+        'success' => true,
+        'data' => [
+          'ride' => $ride->fresh(),
+          'aboard_employees' => $ride->aboard_employees
+        ],
+        'message' => 'Employee marked as aboard'
+      ]);
+    } catch (\Exception $e) {
+      Log::error('Failed to mark member aboard', [
+        'ride_id' => $id,
+        'member_id' => $memberId,
+        'error' => $e->getMessage()
+      ]);
+
+      return response()->json([
+        'success' => false,
+        'message' => 'Failed to update boarding status',
+        'error' => $e->getMessage()
+      ], 500);
+    }
+  }
 }
+
