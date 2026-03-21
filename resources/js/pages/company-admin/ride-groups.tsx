@@ -10,10 +10,13 @@ import { BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 import SetupBanner from '@/components/company/setup-banner';
-import { Loader2, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import { Loader2, Pencil, Plus, Trash2, Users, X, Eye, BarChart3, List } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import RideGroupDetailSheet from '@/components/company/RideGroupDetailSheet';
+import ReportsDashboard from '@/components/company/ReportsDashboard';
+import { cn } from '@/lib/utils';
 
 interface RideGroup {
     id: number;
@@ -85,6 +88,9 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
+    const [selectedDetailGroupId, setSelectedDetailGroupId] = useState<number | null>(null);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'groups' | 'reports'>('groups');
 
     const [formData, setFormData] = useState({
         group_name: '',
@@ -409,9 +415,40 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                  <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">My Ride Groups</h1>
-                        <p className="text-muted-foreground">Manage recurring ride groups for your employees</p>
+                        <p className="text-muted-foreground">Manage recurring ride groups and view performance reports</p>
                     </div>
-                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+
+                    <div className="flex items-center gap-4">
+                        {/* Tab Toggle */}
+                        <div className="inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+                            <button
+                                onClick={() => setActiveTab('groups')}
+                                className={cn(
+                                    'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
+                                    activeTab === 'groups'
+                                        ? 'bg-white shadow-xs dark:bg-neutral-700 dark:text-neutral-100'
+                                        : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60',
+                                )}
+                            >
+                                <List className="mr-2 h-4 w-4" />
+                                <span className="text-sm">Manage Groups</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('reports')}
+                                className={cn(
+                                    'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
+                                    activeTab === 'reports'
+                                        ? 'bg-white shadow-xs dark:bg-neutral-700 dark:text-neutral-100'
+                                        : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60',
+                                )}
+                            >
+                                <BarChart3 className="mr-2 h-4 w-4" />
+                                <span className="text-sm">Reports</span>
+                            </button>
+                        </div>
+                        
+                        {activeTab === 'groups' && (
+                            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <Button onClick={handleCreateClick} disabled={!companySetup.is_complete}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Ride Group
@@ -653,8 +690,10 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                             </form>
                         </DialogContent>
                     </Dialog>
+                    )}
                 </div>
 
+                {activeTab === 'groups' ? (
                 <Card>
                     <CardHeader>
                         <CardTitle>My Ride Groups</CardTitle>
@@ -720,9 +759,22 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                                 <Button 
                                                     variant="ghost" 
                                                     size="sm" 
+                                                    onClick={() => {
+                                                        setSelectedDetailGroupId(group.id);
+                                                        setIsDetailOpen(true);
+                                                    }} 
+                                                    className="mr-1"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="h-4 w-4 text-primary" />
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
                                                     onClick={() => handleEdit(group)} 
-                                                    className="mr-2"
+                                                    className="mr-1"
                                                     disabled={!companySetup.is_complete}
+                                                    title="Edit"
                                                 >
                                                     <Pencil className="h-4 w-4 text-blue-500" />
                                                 </Button>
@@ -731,6 +783,7 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                                     size="sm" 
                                                     onClick={() => handleDelete(group.id)}
                                                     disabled={!companySetup.is_complete}
+                                                    title="Delete"
                                                 >
                                                     <Trash2 className="text-destructive h-4 w-4" />
                                                 </Button>
@@ -742,6 +795,15 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                         )}
                     </CardContent>
                 </Card>
+                ) : (
+                    <ReportsDashboard companyId={companyId} />
+                )}
+
+                <RideGroupDetailSheet 
+                    groupId={selectedDetailGroupId} 
+                    open={isDetailOpen} 
+                    onOpenChange={setIsDetailOpen} 
+                />
             </div>
         </AppLayout>
     );

@@ -202,6 +202,16 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsCompanyA
         $companyId = $user->company_id;
         return app(\App\Http\Controllers\CompanyRideGroupController::class)->destroy($companyId, $groupId);
     });
+    Route::get('api/ride-groups/{groupId}', function (Illuminate\Http\Request $request, $groupId) {
+        $user = auth()->user();
+        $companyId = $user->company_id;
+        return app(\App\Http\Controllers\CompanyRideGroupController::class)->show($companyId, $groupId);
+    });
+    Route::get('api/reports', function (Illuminate\Http\Request $request) {
+        $user = auth()->user();
+        $companyId = $user->company_id;
+        return app(\App\Http\Controllers\CompanyRideGroupController::class)->reports($request, $companyId);
+    });
     Route::post('api/ride-groups/{groupId}/members', function (Illuminate\Http\Request $request, $groupId) {
         $user = auth()->user();
         $companyId = $user->company_id;

@@ -52,7 +52,13 @@ class CompanyRideGroupController extends Controller
         try {
             $group = CompanyRideGroup::where('company_id', $companyId)
                 ->where('id', $groupId)
-                ->with(['members.employee', 'assignments.driver'])
+                ->with([
+                    'members.employee.user', 
+                    'assignments.driver.user',
+                    'rideInstances' => function($query) {
+                        $query->orderBy('scheduled_time', 'desc')->limit(10);
+                    }
+                ])
                 ->firstOrFail();
 
             return response()->json([
@@ -64,6 +70,89 @@ class CompanyRideGroupController extends Controller
                 'success' => false,
                 'message' => 'Ride group not found'
             ], 404);
+        }
+    }
+
+    /**
+     * Get ride group reports/analytics for a company
+     */
+    public function reports(Request $request, $companyId)
+    {
+        try {
+            $startDate = $request->query('start_date', now()->subDays(30)->toDateString());
+            $endDate = $request->query('end_date', now()->toDateString());
+
+            $instances = \App\Models\CompanyGroupRideInstance::where('company_id', $companyId)
+                ->whereBetween('scheduled_time', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->with(['rideGroup'])
+                ->get();
+
+            $totalRides = $instances->count();
+            $completedRides = $instances->where('status', 'completed')->count();
+            $cancelledRides = $instances->where('status', 'cancelled')->count();
+            
+            // Calculate opt-outs
+            $totalOptOuts = 0;
+            $optOutsByEmployee = [];
+            
+            foreach ($instances as $instance) {
+                if ($instance->opted_out_employees) {
+                    $count = count($instance->opted_out_employees);
+                    $totalOptOuts += $count;
+                    
+                    foreach ($instance->opted_out_employees as $userId) {
+                        if (!isset($optOutsByEmployee[$userId])) {
+                            $user = \App\Models\User::find($userId);
+                            $optOutsByEmployee[$userId] = [
+                                'name' => $user->name ?? 'Unknown',
+                                'count' => 0
+                            ];
+                        }
+                        $optOutsByEmployee[$userId]['count']++;
+                    }
+                }
+            }
+
+            // Get top opt-out employees
+            uasort($optOutsByEmployee, function($a, $b) {
+                return $b['count'] <=> $a['count'];
+            });
+            $topOptOuts = array_slice($optOutsByEmployee, 0, 5, true);
+
+            // Daily trends
+            $dailyTrends = $instances->groupBy(function($instance) {
+                return $instance->scheduled_time->format('Y-m-d');
+            })->map(function($dayInstances) {
+                return [
+                    'total' => $dayInstances->count(),
+                    'completed' => $dayInstances->where('status', 'completed')->count(),
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'summary' => [
+                        'total_rides' => $totalRides,
+                        'completed_rides' => $completedRides,
+                        'cancelled_rides' => $cancelledRides,
+                        'total_opt_outs' => $totalOptOuts,
+                        'completion_rate' => $totalRides > 0 ? round(($completedRides / $totalRides) * 100, 2) : 0,
+                    ],
+                    'top_opt_outs' => array_values($topOptOuts),
+                    'daily_trends' => $dailyTrends,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch reports', [
+                'company_id' => $companyId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch reports'
+            ], 500);
         }
     }
 
