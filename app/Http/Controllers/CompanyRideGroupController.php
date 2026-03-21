@@ -22,8 +22,14 @@ class CompanyRideGroupController extends Controller
     public function index($companyId)
     {
         try {
-            $groups = CompanyRideGroup::where('company_id', $companyId)
-                ->with(['members.employee', 'assignments.driver'])
+            $user = auth()->user();
+            $query = CompanyRideGroup::query();
+            
+            if (!$user->isSuperAdmin()) {
+                $query->where('company_id', $companyId);
+            }
+            
+            $groups = $query->with(['members.employee.user', 'assignments.driver'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -50,10 +56,18 @@ class CompanyRideGroupController extends Controller
     public function show($companyId, $groupId)
     {
         \Log::info('Fetching ride group detail', ['company_id' => $companyId, 'group_id' => $groupId]);
+        $user = auth()->user();
+        // Super admins can view any group, company admins only their own
+        $query = CompanyRideGroup::query();
+        
+        if (!$user->isSuperAdmin()) {
+            $query->where('company_id', $companyId);
+        }
+        
+        $query->where('id', $groupId);
+
         try {
-            $group = CompanyRideGroup::where('company_id', $companyId)
-                ->where('id', $groupId)
-                ->with([
+            $group = $query->with([
                     'members.employee.user', 
                     'assignments.driver.user',
                     'rideInstances' => function($query) {
@@ -80,11 +94,16 @@ class CompanyRideGroupController extends Controller
     public function reports(Request $request, $companyId)
     {
         try {
+            $user = auth()->user();
             $startDate = $request->query('start_date', now()->subDays(30)->toDateString());
             $endDate = $request->query('end_date', now()->toDateString());
 
-            $instances = \App\Models\CompanyGroupRideInstance::where('company_id', $companyId)
-                ->whereBetween('scheduled_time', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            $query = \App\Models\CompanyGroupRideInstance::query();
+            if (!$user->isSuperAdmin()) {
+                $query->where('company_id', $companyId);
+            }
+            
+            $instances = $query->whereBetween('scheduled_time', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                 ->with(['rideGroup'])
                 ->get();
 
