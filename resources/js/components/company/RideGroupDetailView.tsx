@@ -277,9 +277,9 @@ export default function RideGroupDetailView({ groupId, onBack, companyId }: Ride
                                                 <TableCell className="font-medium">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-8 w-8 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-neutral-600">
-                                                            {member.employee?.user?.name?.charAt(0)}
+                                                            {member.employee?.name?.charAt(0)}
                                                         </div>
-                                                        {member.employee?.user?.name}
+                                                        {member.employee?.name}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -287,7 +287,7 @@ export default function RideGroupDetailView({ groupId, onBack, companyId }: Ride
                                                         {member.pickup_address}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-sm">{member.employee?.user?.email}</TableCell>
+                                                <TableCell className="text-sm">{member.employee?.email}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>

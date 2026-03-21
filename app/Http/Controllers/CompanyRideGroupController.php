@@ -29,7 +29,7 @@ class CompanyRideGroupController extends Controller
                 $query->where('company_id', $companyId);
             }
             
-            $groups = $query->with(['members.employee.user', 'assignments.driver'])
+            $groups = $query->with(['members.employee', 'assignments.driver.user'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -68,7 +68,7 @@ class CompanyRideGroupController extends Controller
 
         try {
             $group = $query->with([
-                    'members.employee.user', 
+                    'members.employee', 
                     'assignments.driver.user',
                     'rideInstances' => function($query) {
                         $query->orderBy('scheduled_time', 'desc')->limit(10);
