@@ -141,12 +141,41 @@ class CompanyRideDriverController extends Controller
         })
         ->first();
 
+      // If no specific instance, try to find an assignment (Marketplace enrollment view)
+      if (!$ride) {
+          $assignment = \App\Models\CompanyRideGroupAssignment::with(['rideGroup.members.employee', 'company'])
+              ->where('id', $id)
+              ->first();
+
+          if ($assignment) {
+              $group = $assignment->rideGroup;
+              // Synthesize a virtual ride object for the detail page
+              $ride = [
+                  'id' => $assignment->id, // Use assignment ID so "Enroll" works
+                  'is_assignment' => true,
+                  'company_id' => $assignment->company_id,
+                  'ride_group_id' => $assignment->ride_group_id,
+                  'pickup_address' => $group->pickup_address,
+                  'destination_address' => $group->destination_address,
+                  'pickup_lat' => (double) $group->pickup_lat,
+                  'pickup_lng' => (double) $group->pickup_lng,
+                  'destination_lat' => (double) $group->destination_lat,
+                  'destination_lng' => (double) $group->destination_lng,
+                  'status' => ($assignment->driver_id == $driver->id) ? 'enrolled' : 'enrollment_available',
+                  'company' => $assignment->company,
+                  'ride_group' => $group,
+                  'scheduled_time' => $group->scheduled_time ? $group->scheduled_time->format('H:i') : null,
+                  'created_at' => $assignment->created_at->toIso8601String(),
+              ];
+          }
+      }
+
       if (!$ride) {
         return response()->json([
           'success' => false,
-          'message' => 'Ride not found, not assigned to you, or not in marketplace. (v2)',
+          'message' => 'Ride or Route not found',
           'debug_driver_id' => $driver->id,
-          'debug_ride_id' => $id
+          'debug_requested_id' => $id
         ], 404);
       }
 
