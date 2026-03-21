@@ -732,15 +732,7 @@ class AdminDashboardController extends Controller
             'employees' => function ($query) {
                 $query->where('status', 'approved');
             },
-            'rides',
-            'driverContracts' => function ($query) {
-                $query->where('status', 'active')
-                    ->where('start_date', '<=', now())
-                    ->where(function ($q) {
-                        $q->whereNull('end_date')
-                            ->orWhere('end_date', '>=', now());
-                    });
-            }
+            'rides'
         ])->findOrFail($id);
 
         // Get statistics

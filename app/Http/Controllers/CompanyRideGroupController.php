@@ -49,6 +49,7 @@ class CompanyRideGroupController extends Controller
      */
     public function show($companyId, $groupId)
     {
+        \Log::info('Fetching ride group detail', ['company_id' => $companyId, 'group_id' => $groupId]);
         try {
             $group = CompanyRideGroup::where('company_id', $companyId)
                 ->where('id', $groupId)

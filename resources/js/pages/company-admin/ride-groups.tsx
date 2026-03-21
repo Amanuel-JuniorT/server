@@ -14,7 +14,7 @@ import { Loader2, Pencil, Plus, Trash2, Users, X, Eye, BarChart3, List } from 'l
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
-import RideGroupDetailSheet from '@/components/company/RideGroupDetailSheet';
+import RideGroupDetailView from '@/components/company/RideGroupDetailView';
 import ReportsDashboard from '@/components/company/ReportsDashboard';
 import { cn } from '@/lib/utils';
 
@@ -89,7 +89,6 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
     const [selectedDetailGroupId, setSelectedDetailGroupId] = useState<number | null>(null);
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'groups' | 'reports'>('groups');
 
     const [formData, setFormData] = useState({
@@ -406,8 +405,17 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
 
     const availableEmployees = employees.filter((e) => !selectedEmployees.some((se) => se.employee_id === e.id));
 
+    const dynamicBreadcrumbs = [...breadcrumbs];
+    if (selectedDetailGroupId) {
+        const selectedGroup = groups.find(g => g.id === selectedDetailGroupId);
+        dynamicBreadcrumbs.push({ 
+            title: selectedGroup?.group_name || 'Group Details', 
+            href: '#' 
+        });
+    }
+
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={dynamicBreadcrumbs}>
             <Head title="My Ride Groups" />
  
              <div className="space-y-6">
@@ -694,7 +702,13 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                     </div>
                 </div>
 
-                {activeTab === 'groups' ? (
+                {selectedDetailGroupId ? (
+                    <RideGroupDetailView 
+                        groupId={selectedDetailGroupId} 
+                        companyId={companyId} 
+                        onBack={() => setSelectedDetailGroupId(null)} 
+                    />
+                ) : activeTab === 'groups' ? (
                 <Card>
                     <CardHeader>
                         <CardTitle>My Ride Groups</CardTitle>
@@ -760,10 +774,7 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                                 <Button 
                                                     variant="ghost" 
                                                     size="sm" 
-                                                    onClick={() => {
-                                                        setSelectedDetailGroupId(group.id);
-                                                        setIsDetailOpen(true);
-                                                    }} 
+                                                    onClick={() => setSelectedDetailGroupId(group.id)} 
                                                     className="mr-1"
                                                     title="View Details"
                                                 >
@@ -799,12 +810,6 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                 ) : (
                     <ReportsDashboard companyId={companyId} />
                 )}
-
-                <RideGroupDetailSheet 
-                    groupId={selectedDetailGroupId} 
-                    open={isDetailOpen} 
-                    onOpenChange={setIsDetailOpen} 
-                />
             </div>
         </AppLayout>
     );
