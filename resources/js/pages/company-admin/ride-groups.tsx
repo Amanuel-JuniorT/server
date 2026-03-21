@@ -691,6 +691,7 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                         </DialogContent>
                     </Dialog>
                     )}
+                    </div>
                 </div>
 
                 {activeTab === 'groups' ? (
