@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Building2, Car, Edit, Eye, Mail, MapPin, MoreHorizontal, Phone, Plus, Trash2, Users } from 'lucide-react';
+import { Building2, Car, Edit, Eye, Mail, MapPin, MoreHorizontal, Phone, Plus, Trash2, Users, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -25,6 +25,7 @@ interface Company {
     email?: string;
     is_active: boolean;
     employees_count?: number;
+    pending_invitation_id?: number | null;
     created_at: string;
     updated_at: string;
 }
@@ -255,6 +256,29 @@ export default function CompaniesPage() {
             });
         } catch (error) {
             toast.error('Failed to delete company');
+        } finally {
+            setIsLoading(false);
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleResendInvitation = async (invitationId: number) => {
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        setIsLoading(true);
+
+        try {
+            await router.post(`/admin/invitations/${invitationId}/resend`, {}, {
+                onSuccess: () => {
+                    toast.success('Invitation resent successfully');
+                },
+                onError: () => {
+                    toast.error('Failed to resend invitation');
+                },
+            });
+        } catch (error) {
+            toast.error('Failed to resend invitation');
         } finally {
             setIsLoading(false);
             setIsSubmitting(false);
@@ -645,6 +669,12 @@ export default function CompaniesPage() {
                                                             <Car className="mr-2 h-4 w-4" />
                                                             Assign Driver
                                                         </DropdownMenuItem>
+                                                        {company.pending_invitation_id && (
+                                                            <DropdownMenuItem onClick={() => handleResendInvitation(company.pending_invitation_id!)}>
+                                                                <RotateCw className="mr-2 h-4 w-4" />
+                                                                Resend Admin Invite
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem onClick={() => openDeleteDialog(company)} className="text-red-600">
                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                             Delete

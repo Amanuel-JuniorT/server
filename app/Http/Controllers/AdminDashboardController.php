@@ -143,6 +143,12 @@ class AdminDashboardController extends Controller
             'pending_requests' => CompanyEmployee::where('status', 'pending')->count(),
         ];
 
+        // Attach pending invitation ID for each company if one exists
+        $pendingInvitations = \App\Models\AdminInvitation::valid()->whereNotNull('company_id')->get()->keyBy('company_id');
+        $companies->each(function ($company) use ($pendingInvitations) {
+            $company->pending_invitation_id = $pendingInvitations->has($company->id) ? $pendingInvitations[$company->id]->id : null;
+        });
+
         return Inertia::render('companies', [
             'companies' => $companies,
             'drivers' => $drivers,
