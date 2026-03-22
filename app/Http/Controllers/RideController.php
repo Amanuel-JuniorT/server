@@ -29,6 +29,8 @@ use App\Events\DriverArrived;
 use App\Jobs\DispatchRideJob;
 use App\Http\Resources\VehicleTypeResource;
 use Illuminate\Support\Facades\Storage;
+use App\Models\SosAlert;
+use App\Events\SosAlertReceived;
 
 use App\Services\UnifiedNotificationService;
 
@@ -754,6 +756,46 @@ class RideController extends Controller
         broadcast(new RideStatusChanged($ride));
 
         return response()->json(['message' => 'Ride cancelled', 'ride' => $ride], 200);
+    }
+
+    /**
+     * Trigger an SOS alert for a ride
+     */
+    public function triggerSos($id, Request $request)
+    {
+        $ride = Ride::findOrFail($id);
+        $user = $request->user();
+
+        // Verify the user is either the driver or passenger of this ride
+        if ($user->id !== $ride->passenger_id && (!$ride->driver || $user->id !== $ride->driver->user_id)) {
+            return response()->json(['message' => 'Unauthorized to trigger SOS for this ride'], 403);
+        }
+
+        $validated = $request->validate([
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'message' => 'nullable|string|max:500'
+        ]);
+
+        $lat = $validated['latitude'] ?? $ride->origin_lat;
+        $lng = $validated['longitude'] ?? $ride->origin_lng;
+
+        $sosAlert = SosAlert::create([
+            'user_id' => $user->id,
+            'ride_id' => $ride->id,
+            'status' => 'open',
+            'latitude' => $lat,
+            'longitude' => $lng,
+            'message' => $validated['message'] ?? 'Emergency SOS Triggered by ' . $user->role,
+        ]);
+
+        // Broadcast to admin dashboard
+        broadcast(new SosAlertReceived($sosAlert));
+
+        return response()->json([
+            'message' => 'SOS Alert triggered successfully',
+            'sos_alert' => $sosAlert
+        ], 200);
     }
 
     /**

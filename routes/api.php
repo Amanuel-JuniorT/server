@@ -95,6 +95,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ride/{id}/confirm-payment', [RideController::class, 'confirmWalletPayment']);
     Route::post('/ride/{id}/status', [RideController::class, 'updateStatus']);
     Route::post('/ride/{id}/cancel', [RideController::class, 'cancelRide']);
+    Route::post('/ride/{id}/sos', [RideController::class, 'triggerSos']);
     Route::post('/ride/{id}/rate', [RideController::class, 'rate']);
     Route::post('/ride/{id}/pay', [RideController::class, 'payUpfront']);
     Route::post('/ride/{id}/retry', [RideController::class, 'retryRide']);

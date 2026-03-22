@@ -36,6 +36,7 @@ class PoolingController extends Controller
             'destination_lat' => 'required|numeric',
             'destination_lng' => 'required|numeric',
             'polyline' => 'required|string',
+            'vehicle_type_id' => 'required|integer',
         ]);
 
         $pooler = $request->user();
@@ -45,6 +46,7 @@ class PoolingController extends Controller
             ->where('status', 'accepted')
             ->where('is_pool_enabled', true)
             ->where('passenger_accepts_pooling', true)
+            ->where('vehicle_type_id', $request->vehicle_type_id)
             ->whereBetween('destination_lat', [
                 $request->destination_lat - 0.1,
                 $request->destination_lat + 0.1
