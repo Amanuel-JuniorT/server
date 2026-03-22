@@ -14,7 +14,7 @@
         "inertiajs/inertia-laravel": "^2.0",
         "kreait/laravel-firebase": "^6.1",
         "laravel/framework": "^12.0",
-        "laravel/octane": "*",
+        "laravel/octane": "^2.17",
         "laravel/reverb": "*",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
