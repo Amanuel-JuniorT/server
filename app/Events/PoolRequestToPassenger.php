@@ -19,17 +19,19 @@ class PoolRequestToPassenger implements ShouldBroadcastNow
     public $poolerRating;
     public $routeMatch;
     public $savings;
+    public $detourMinutes;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(Pooling $pooling, $poolerName, $poolerRating, $routeMatch, $savings)
+    public function __construct(Pooling $pooling, $poolerName, $poolerRating, $routeMatch, $savings, $detourMinutes = 4)
     {
         $this->pooling = $pooling;
         $this->poolerName = $poolerName;
         $this->poolerRating = $poolerRating;
         $this->routeMatch = $routeMatch;
         $this->savings = $savings;
+        $this->detourMinutes = $detourMinutes;
     }
 
     /**
@@ -48,6 +50,7 @@ class PoolRequestToPassenger implements ShouldBroadcastNow
             'pooler_rating' => $this->poolerRating,
             'route_match' => $this->routeMatch,
             'savings' => $this->savings,
+            'detour_minutes' => $this->detourMinutes,
             'timeout_seconds' => 20,
         ];
     }

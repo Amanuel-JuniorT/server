@@ -7,6 +7,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use App\Models\Pooling;
 use App\Events\PoolRequestToDriver;
 use App\Events\PoolRejected;
+use App\Jobs\RetryPoolMatch;
 use Illuminate\Support\Facades\Log;
 
 class ProcessPoolTimeout implements ShouldQueue
@@ -60,18 +61,22 @@ class ProcessPoolTimeout implements ShouldQueue
                     ->delay(now()->addSeconds(30));
             }
         } elseif ($this->timeoutType === 'driver') {
-            // Auto-reject from driver after 30 seconds
+            // Auto-reject from driver after 30 seconds of silence
             if ($pooling->status === 'pending_driver' || $pooling->status === 'passenger_a_accepted') {
                 $pooling->update(['status' => 'rejected_by_timeout']);
 
                 Log::info("Driver auto-rejected pool request {$pooling->id} due to timeout");
 
-                // Notify Passenger B
+                // Notify Passenger B immediately
                 broadcast(new PoolRejected(
                     $pooling->passenger_id,
                     $pooling->id,
                     'timeout'
                 ));
+
+                // Retry: find the next-best match for Passenger B
+                dispatch(new RetryPoolMatch($pooling->id, ($pooling->retry_count ?? 0) + 1))
+                    ->delay(now()->addSeconds(2));
             }
         }
     }

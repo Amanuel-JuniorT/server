@@ -14,6 +14,7 @@ use App\Events\PoolRequestToDriver;
 use App\Events\PoolConfirmed;
 use App\Events\PoolRejected;
 use App\Jobs\ProcessPoolTimeout;
+use App\Jobs\RetryPoolMatch;
 use Illuminate\Support\Facades\DB;
 
 use App\Services\UnifiedNotificationService;
@@ -132,6 +133,22 @@ class PoolingController extends Controller
             'status' => 'pending_passenger_a'
         ]);
 
+        // Calculate exact detour time
+        $driverLat = $bestMatch['ride']->driver->latitude ?? $bestMatch['ride']->origin_lat;
+        $driverLng = $bestMatch['ride']->driver->longitude ?? $bestMatch['ride']->origin_lng;
+
+        $detourData = RouteHelper::calculateDetourEta(
+            $driverLat,
+            $driverLng,
+            $bestMatch['ride']->destination_lat,
+            $bestMatch['ride']->destination_lng,
+            $request->origin_lat,
+            $request->origin_lng,
+            $request->destination_lat,
+            $request->destination_lng
+        );
+        $detourMinutes = $detourData ? $detourData['extra_minutes'] : 4; // Fallback
+
         // Calculate savings (30% discount)
         $estimatedFare = 70; // Calculate dynamically based on distance
         $savings = $estimatedFare * 0.3;
@@ -147,7 +164,8 @@ class PoolingController extends Controller
                 $pooler->name,
                 4.5,
                 round($bestMatch['match_result']['score'] * 100) . '%',
-                $savings
+                $savings,
+                $detourMinutes
             ),
             'Passenger'
         );
@@ -192,11 +210,11 @@ class PoolingController extends Controller
                 ['pooling_id' => $pooling->id],
                 new PoolRequestToDriver(
                     $pooling,
-                    $pooler->name,
+                    $pooling->passenger->name,
                     4.5,
                     '85%',
                     25,
-                    '500m'
+                    '+4 Minutes'
                 ),
                 'Driver'
             );
@@ -212,11 +230,11 @@ class PoolingController extends Controller
         } else {
             $pooling->update(['status' => 'rejected_by_passenger_a']);
 
-            // Notify Passenger B (Hybrid)
+            // Notify Passenger B immediately
             $this->notificationService->notifyUser(
                 $pooling->passenger_id,
                 "Pool Request Rejected",
-                "Your pool request was not accepted by the other passenger.",
+                "Your pool request was not accepted. Searching for another ride...",
                 ['pooling_id' => $pooling->id],
                 new PoolRejected(
                     $pooling->passenger_id,
@@ -225,6 +243,10 @@ class PoolingController extends Controller
                 ),
                 'Passenger'
             );
+
+            // Retry: find the next-best match for Passenger B
+            dispatch(new RetryPoolMatch($pooling->id, ($pooling->retry_count ?? 0) + 1))
+                ->delay(now()->addSeconds(2));
 
             return response()->json(['message' => 'Pool request rejected']);
         }
@@ -307,11 +329,11 @@ class PoolingController extends Controller
         } else {
             $pooling->update(['status' => 'rejected_by_driver']);
 
-            // Notify Passenger B (Hybrid)
+            // Notify Passenger B immediately
             $this->notificationService->notifyUser(
                 $pooling->passenger_id,
                 "Pool Request Rejected",
-                "The driver has rejected the pool request.",
+                "The driver couldn't take you both. Searching for another ride...",
                 ['pooling_id' => $pooling->id],
                 new PoolRejected(
                     $pooling->passenger_id,
@@ -320,6 +342,10 @@ class PoolingController extends Controller
                 ),
                 'Passenger'
             );
+
+            // Retry: find the next-best match for Passenger B
+            dispatch(new RetryPoolMatch($pooling->id, ($pooling->retry_count ?? 0) + 1))
+                ->delay(now()->addSeconds(2));
 
             return response()->json(['message' => 'Pool request rejected']);
         }

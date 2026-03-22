@@ -263,4 +263,59 @@ class RouteHelper
 
         return $json['routes'][0]['overview_polyline']['points'];
     }
+
+    public static function calculateDetourEta($driverLat, $driverLng, $hostDestLat, $hostDestLng, $joinerOrgLat, $joinerOrgLng, $joinerDestLat, $joinerDestLng)
+    {
+        $apiKey = env("GOOGLE_DIRECTION_API_KEY");
+        if (!$apiKey) return null;
+
+        // 1. Get original ETA (Driver -> Host Dest)
+        $originalUrl = "https://maps.googleapis.com/maps/api/directions/json?" . http_build_query([
+            'origin' => "$driverLat,$driverLng",
+            'destination' => "$hostDestLat,$hostDestLng",
+            'key' => $apiKey
+        ]);
+        
+        $originalResponse = Http::get($originalUrl);
+        $originalDurationSeconds = 0;
+        
+        if ($originalResponse->successful()) {
+            $json = $originalResponse->json();
+            if (!empty($json['routes'][0]['legs'])) {
+                $originalDurationSeconds = $json['routes'][0]['legs'][0]['duration']['value'];
+            }
+        }
+
+        // 2. Get detour ETA (Driver -> Joiner Org -> Joiner Dest -> Host Dest)
+        $detourUrl = "https://maps.googleapis.com/maps/api/directions/json?" . http_build_query([
+            'origin' => "$driverLat,$driverLng",
+            'destination' => "$hostDestLat,$hostDestLng",
+            'waypoints' => "optimize:false|$joinerOrgLat,$joinerOrgLng|$joinerDestLat,$joinerDestLng",
+            'key' => $apiKey
+        ]);
+
+        $detourResponse = Http::get($detourUrl);
+        if ($detourResponse->failed()) {
+            return null;
+        }
+
+        $json = $detourResponse->json();
+        if (empty($json['routes'][0]['legs'])) {
+            return null;
+        }
+
+        $totalDetourDurationSeconds = 0;
+        foreach ($json['routes'][0]['legs'] as $leg) {
+            $totalDetourDurationSeconds += $leg['duration']['value'];
+        }
+
+        $extraSeconds = $totalDetourDurationSeconds - $originalDurationSeconds;
+        $extraMinutes = (int) round($extraSeconds / 60);
+        
+        return [
+            'extra_minutes' => max(0, $extraMinutes),
+            'detour_polyline' => $json['routes'][0]['overview_polyline']['points'] ?? null,
+            'total_duration_seconds' => $totalDetourDurationSeconds
+        ];
+    }
 }

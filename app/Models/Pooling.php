@@ -18,6 +18,7 @@ class Pooling extends Model
         'destination_lat',
         'destination_lng',
         'status',
+        'retry_count',
         'requested_at',
         'started_at',
         'completed_at',
