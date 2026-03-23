@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Validator;
 use App\Services\AdminInvitationService;
+use Illuminate\Support\Facades\Storage;
 
 class AdminDashboardController extends Controller
 {
@@ -221,8 +222,8 @@ class AdminDashboardController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'license_number' => $driver->license_number,
-                'license_image_path' => \Storage::url($driver->license_image_path),
-                'profile_picture_path' => \Storage::url($driver->profile_picture_path),
+                'license_image_path' => Storage::url($driver->license_image_path),
+                'profile_picture_path' => Storage::url($driver->profile_picture_path),
                 'status' => $driver->status,
                 'vehicle_type' => $vehicle && $vehicle->type ? $vehicle->type->display_name : 'N/A',
                 'vehicle_details' => $vehicle ? "{$vehicle->make} {$vehicle->model} ({$vehicle->plate_number})" : 'N/A',
@@ -263,7 +264,11 @@ class AdminDashboardController extends Controller
                 'status' => $ride->status,
                 'cash_payment' => $ride->cash_payment,
                 'prepaid' => $ride->prepaid,
+                'is_pool_enabled' => $ride->is_pool_enabled ?? false,
+                'passenger_accepts_pooling' => $ride->passenger_accepts_pooling ?? false,
                 'is_pool_ride' => $ride->is_pool_ride ?? false,
+                'parent_ride_id' => $ride->parent_ride_id,
+                'pool_partner_ride_id' => $ride->pool_partner_ride_id,
                 'requested_at' => $ride->requested_at ? \Carbon\Carbon::parse($ride->requested_at)->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s') : null,
                 'started_at' => $ride->started_at ? \Carbon\Carbon::parse($ride->started_at)->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s') : null,
                 'completed_at' => $ride->completed_at ? \Carbon\Carbon::parse($ride->completed_at)->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s') : null,
@@ -324,7 +329,11 @@ class AdminDashboardController extends Controller
             'status' => $ride->status,
             'cash_payment' => $ride->cash_payment,
             'prepaid' => $ride->prepaid,
+            'is_pool_enabled' => $ride->is_pool_enabled ?? false,
+            'passenger_accepts_pooling' => $ride->passenger_accepts_pooling ?? false,
             'is_pool_ride' => $ride->is_pool_ride ?? false,
+            'parent_ride_id' => $ride->parent_ride_id,
+            'pool_partner_ride_id' => $ride->pool_partner_ride_id,
             'requested_at' => $ride->requested_at ? \Carbon\Carbon::parse($ride->requested_at)->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s') : null,
             'started_at' => $ride->started_at ? \Carbon\Carbon::parse($ride->started_at)->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s') : null,
             'completed_at' => $ride->completed_at ? \Carbon\Carbon::parse($ride->completed_at)->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s') : null,

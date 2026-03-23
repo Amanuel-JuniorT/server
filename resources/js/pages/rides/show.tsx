@@ -4,17 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import RideLayout from '@/layouts/ride/layout';
 import { BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { AlertCircle, Calendar, Car, Clock, CreditCard, MapPin, Phone, RefreshCw, Star, User, XCircle } from 'lucide-react';
 
 interface Ride {
     id: number;
+    passenger_id: number;
     passenger_name: string;
     passenger_phone: string;
     passenger_email: string;
     driver_id?: number | null;
     driver_name: string;
     driver_phone: string;
+    dispatched_by_admin_id: number | null;
     vehicle?: {
         make: string;
         model: string;
@@ -27,7 +29,11 @@ interface Ride {
     status: string;
     cash_payment: boolean;
     prepaid: boolean;
+    is_pool_enabled: boolean;
+    passenger_accepts_pooling: boolean;
     is_pool_ride: boolean;
+    parent_ride_id?: number | null;
+    pool_partner_ride_id?: number | null;
     requested_at: string;
     started_at?: string | null;
     completed_at?: string | null;
@@ -287,26 +293,68 @@ export default function RideShow({ ride }: { ride: Ride }) {
                         </Card>
                     </div>
 
-                    {/* Feedback Card */}
-                    {ride.rating && (
+                    {/* Pooling Card */}
+                    {(ride.is_pool_enabled || ride.is_pool_ride) && (
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
-                                    Passenger Feedback
+                                    <RefreshCw className="h-5 w-5 text-purple-500" />
+                                    Pooling Information
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="mb-2 flex items-center gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                        <Star
-                                            key={i}
-                                            className={cn('h-4 w-4', i < ride.rating! ? 'fill-yellow-500 text-yellow-500' : 'text-gray-300')}
-                                        />
-                                    ))}
-                                    <span className="ml-2 text-lg font-bold">{ride.rating}/5</span>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-muted-foreground text-xs font-semibold uppercase">Pooling Role</p>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            {ride.is_pool_ride ? (
+                                                ride.parent_ride_id ? (
+                                                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Joiner</Badge>
+                                                ) : (
+                                                    <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">Host</Badge>
+                                                )
+                                            ) : (
+                                                <Badge variant="outline">Single (Pool Enabled)</Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-muted-foreground text-xs font-semibold uppercase">Status</p>
+                                        <p className="text-sm font-medium">
+                                            {ride.pool_partner_ride_id ? 'Matched & Grouped' : ride.is_pool_enabled ? 'Open for matching' : 'N/A'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <p className="text-muted-foreground text-sm italic">&ldquo;{ride.rating_comment || 'No comment provided'}&rdquo;</p>
+
+                                {ride.pool_partner_ride_id && (
+                                    <div className="rounded-md border border-purple-100 bg-purple-50 p-3">
+                                        <p className="text-xs font-semibold tracking-wider text-purple-800 uppercase">Matched Partner</p>
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <span className="text-sm font-medium text-purple-700">Ride #{ride.pool_partner_ride_id}</span>
+                                            <Button variant="ghost" size="sm" asChild className="h-7 text-purple-700 hover:bg-purple-100">
+                                                <Link href={`/rides/${ride.pool_partner_ride_id}`}>View Partner Ride</Link>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {ride.parent_ride_id && !ride.pool_partner_ride_id && (
+                                    <div className="rounded-md border border-blue-100 bg-blue-50 p-3">
+                                        <p className="text-xs font-semibold tracking-wider text-blue-800 uppercase">Primary (Host) Ride</p>
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <span className="text-sm font-medium text-blue-700">Ride #{ride.parent_ride_id}</span>
+                                            <Button variant="ghost" size="sm" asChild className="h-7 text-blue-700 hover:bg-blue-100">
+                                                <Link href={`/rides/${ride.parent_ride_id}`}>View Host Ride</Link>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <p className="text-muted-foreground text-xs italic">
+                                    {ride.is_pool_ride 
+                                      ? "This is a shared ride. Fare shown reflects the 30% pooling discount."
+                                      : "Passenger has opted-in to pooling. System will attempt to match with compatible routes."}
+                                </p>
                             </CardContent>
                         </Card>
                     )}

@@ -178,6 +178,31 @@ export default function RidesPage() {
         }
     };
 
+    const getPoolBadge = (ride: Ride) => {
+        if (ride.is_pool_ride) {
+            if (ride.parent_ride_id) {
+                return (
+                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+                        Pool Joiner (#{ride.parent_ride_id})
+                    </Badge>
+                );
+            }
+            return (
+                <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700">
+                    Pool Host
+                </Badge>
+            );
+        }
+        if (ride.is_pool_enabled) {
+            return (
+                <Badge variant="outline" className="border-dashed border-gray-300 text-gray-500">
+                    Pooling Enabled
+                </Badge>
+            );
+        }
+        return null;
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Ride Management" />
@@ -330,7 +355,12 @@ export default function RidesPage() {
                                             </div>
                                         </td>
                                         <td className={tableDataClass(index, columns)}>{ride.price ? `${ride.price} ETB` : '-'}</td>
-                                        <td className={tableDataClass(index, columns)}>{getStatusBadge(ride.status)}</td>
+                                        <td className={tableDataClass(index, columns)}>
+                                            <div className="flex flex-col gap-1">
+                                                {getStatusBadge(ride.status)}
+                                                {getPoolBadge(ride)}
+                                            </div>
+                                        </td>
                                         <td className={tableDataClass(index, columns)}>
                                             <div className="text-muted-foreground flex items-center gap-1 text-xs">
                                                 <Clock className="h-3 w-3" />
@@ -442,9 +472,12 @@ export default function RidesPage() {
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-muted-foreground text-sm font-semibold">Type</p>
-                                    <Badge variant="outline" className="capitalize">
-                                        {selectedRide.is_pool_ride ? 'Pool' : 'Standard'}
-                                    </Badge>
+                                    <div className="flex flex-col gap-1">
+                                        <Badge variant="outline" className="capitalize">
+                                            {selectedRide.is_pool_ride ? 'Pool' : 'Standard'}
+                                        </Badge>
+                                        {getPoolBadge(selectedRide)}
+                                    </div>
                                 </div>
                             </div>
 

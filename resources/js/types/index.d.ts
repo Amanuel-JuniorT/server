@@ -98,7 +98,11 @@ export interface Ride {
     status: string;
     cash_payment: boolean;
     prepaid: boolean;
+    is_pool_enabled: boolean;
+    passenger_accepts_pooling: boolean;
     is_pool_ride: boolean;
+    parent_ride_id: number | null;
+    pool_partner_ride_id: number | null;
     requested_at: string | null;
     started_at: string | null;
     completed_at: string | null;
