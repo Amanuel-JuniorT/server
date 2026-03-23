@@ -230,6 +230,7 @@ class AdminDashboardController extends Controller
                 'created_at' => $driver->created_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
                 'updated_at' => $driver->updated_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
                 'approval_state' => $driver->approval_state,
+                'corporate_agreed_version' => $driver->corporate_agreed_version,
             ];
         });
         return Inertia::render('drivers', [
@@ -388,6 +389,7 @@ class AdminDashboardController extends Controller
             'reject_message' => $driver->reject_message ?? "",
             'created_at' => $driver->created_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
             'updated_at' => $driver->updated_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
+            'corporate_agreed_version' => $driver->corporate_agreed_version,
         ];
 
         return Inertia::render('driver/profile', [
@@ -577,6 +579,7 @@ class AdminDashboardController extends Controller
                 'updated_at' => $driver->updated_at->copy()->timezone('Africa/Addis_Ababa')->format('Y-m-d H:i:s'),
                 'approval_state' => $driver->approval_state,
                 'reject_message' => $driver->reject_message ?? '',
+                'corporate_agreed_version' => $driver->corporate_agreed_version,
             ];
         });
 

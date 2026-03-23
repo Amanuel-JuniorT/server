@@ -78,6 +78,7 @@ export interface Driver {
     vehicle_type: string;
     vehicle_details: string;
     reject_message: string;
+    corporate_agreed_version: string | null;
     [key: string]: unknown; // This allows for additional properties...
 }
 

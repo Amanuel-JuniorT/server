@@ -86,6 +86,18 @@ function DriverDetailModal({ driver, open, onClose }: { driver: Driver | null; o
                         <li>
                             <strong>Updated At:</strong> {driver.updated_at}
                         </li>
+                        <li>
+                            <strong>Corporate Agreement:</strong>{' '}
+                            {driver.corporate_agreed_version ? (
+                                <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
+                                    Agreed ({driver.corporate_agreed_version})
+                                </span>
+                            ) : (
+                                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                                    No
+                                </span>
+                            )}
+                        </li>
                     </ul>
                     <div className="mb-4">
                         <div className="mb-2">
@@ -209,6 +221,7 @@ export default function DriversPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [approvalState, setApprovalState] = useState('');
+    const [corporateFilter, setCorporateFilter] = useState('');
     const [filteredDrivers, setFilteredDrivers] = useState(drivers);
     const [modalOpen, setModalOpen] = useState(false);
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -234,10 +247,12 @@ export default function DriversPage() {
                     driver.phone.toLowerCase().includes(search.toLowerCase());
                 const matchesStatus = !statusFilter || driver.status === statusFilter;
                 const matchesApprovalState = !approvalState || driver.approval_state === approvalState;
-                return matchesSearch && matchesStatus && matchesApprovalState;
+                const matchesCorporate =
+                    !corporateFilter || (corporateFilter === 'agreed' ? !!driver.corporate_agreed_version : !driver.corporate_agreed_version);
+                return matchesSearch && matchesStatus && matchesApprovalState && matchesCorporate;
             }),
         );
-    }, [search, statusFilter, drivers, approvalState]);
+    }, [search, statusFilter, drivers, approvalState, corporateFilter]);
 
     const columns = [
         { key: 'id', header: 'ID' },
@@ -247,6 +262,7 @@ export default function DriversPage() {
         { key: 'license_number', header: 'License Number' },
         { key: 'status', header: 'Status' },
         { key: 'noOfRides', header: 'Number of Rides' },
+        { key: 'corporate_agreed_version', header: 'Corporate' },
         { key: 'approval_state', header: 'Approval State' },
         { key: 'actions', header: 'Actions' },
     ];
@@ -308,6 +324,15 @@ export default function DriversPage() {
                         <option value="pending">Pending</option>
                         <option value="rejected">Rejected</option>
                     </select>
+                    <select
+                        value={corporateFilter}
+                        onChange={(e) => setCorporateFilter(e.target.value)}
+                        className="w-full rounded border px-3 py-2 md:w-48"
+                    >
+                        <option value="">All Agreements</option>
+                        <option value="agreed">Corporate Agreed</option>
+                        <option value="not_agreed">Not Agreed</option>
+                    </select>
                 </div>
                 <div className="w-full">
                     <div className="overflow-x-auto rounded-lg border">
@@ -324,6 +349,17 @@ export default function DriversPage() {
                                         <td className={tableDataClass(rowIdx, columns)}>{row.license_number}</td>
                                         <td className={tableDataClass(rowIdx, columns)}>{status[row.status as keyof typeof status] || row.status}</td>
                                         <td className={tableDataClass(rowIdx, columns)}>{row.noOfRides}</td>
+                                        <td className={tableDataClass(rowIdx, columns)}>
+                                            {row.corporate_agreed_version ? (
+                                                <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
+                                                    Yes ({row.corporate_agreed_version})
+                                                </span>
+                                            ) : (
+                                                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                                                    No
+                                                </span>
+                                            )}
+                                        </td>
                                         <td
                                             className={`${row.approval_state == 'approved' ? 'text-green-500' : row.approval_state == 'rejected' ? 'text-red-500' : row.approval_state == 'pending' && 'text-yellow-500'} font-bold ${tableDataClass(rowIdx, columns)}`}
                                         >

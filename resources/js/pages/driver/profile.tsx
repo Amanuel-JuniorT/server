@@ -144,18 +144,26 @@ function ProfileContent({ driver }: { driver: Driver }) {
                         </div>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label className="mr-2 text-sm font-medium">Status</label>
-                            <Badge
-                                variant={driver.status === 'available' ? 'completed' : driver.status === 'on_ride' ? 'pending' : 'failed'}
-                                className="capitalize"
-                            >
-                                {driver.status}
-                            </Badge>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                <div>
+                    <label className="mr-2 text-sm font-medium">Status</label>
+                    <Badge
+                        variant={driver.status === 'available' ? 'completed' : driver.status === 'on_ride' ? 'pending' : 'failed'}
+                        className="capitalize"
+                    >
+                        {driver.status}
+                    </Badge>
+                </div>
+                <div>
+                    <label className="mr-2 text-sm font-medium">Corporate Agreement</label>
+                    {driver.corporate_agreed_version ? (
+                        <Badge variant="completed">Agreed ({driver.corporate_agreed_version})</Badge>
+                    ) : (
+                        <Badge variant="failed">Not Agreed</Badge>
+                    )}
+                </div>
+            </div>
+        </CardContent>
+    </Card>
 
             {/* Driver's Documents */}
             <Card>
