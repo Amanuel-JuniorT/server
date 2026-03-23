@@ -20,16 +20,18 @@ class RideAccepted implements ShouldBroadcastNow
     protected $assigned_driver_data;
     protected $passenger_id;
     protected $driver_id;
+    protected $ride_id;
 
 
     /**
      * Create a new event instance.
      */
-    public function __construct($passenger_id, $assigned_driver_data, $driver_id = null)
+    public function __construct($passenger_id, $assigned_driver_data, $driver_id = null, $ride_id = null)
     {
         $this->assigned_driver_data = $assigned_driver_data;
         $this->passenger_id = $passenger_id;
         $this->driver_id = $driver_id;
+        $this->ride_id = $ride_id;
     }
 
     /**
@@ -54,6 +56,7 @@ class RideAccepted implements ShouldBroadcastNow
     public function broadcastWith()
     {
         return [
+            'id'            => $this->ride_id,
             'driver_id'     => $this->driver_id,
             'driverName'    => $this->assigned_driver_data['driver_name'],
             'driverPhone'   => $this->assigned_driver_data['driver_phone'],

@@ -194,7 +194,7 @@ class RideController extends Controller
                 "Ride Accepted",
                 "Driver {$driverData['driver_name']} has accepted your ride request!",
                 $driverData,
-                new RideAccepted($ride->passenger_id, $driverData, $driver->id),
+                new RideAccepted($ride->passenger_id, $driverData, $driver->id, $ride->id),
                 'Passenger'
             );
 
