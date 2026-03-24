@@ -55,7 +55,10 @@ class Ride extends Model
         'dispatched_by_admin_id',
         'cancelled_by',
         'notified_driver_id',
-        'notified_drivers_count'
+        'notified_drivers_count',
+        'route_polyline',
+        'route_distance',
+        'route_duration'
     ];
 
     public function passenger()

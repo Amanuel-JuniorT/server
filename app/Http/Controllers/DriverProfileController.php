@@ -247,6 +247,16 @@ class DriverProfileController extends Controller
                 $driver->save();
             }
 
+            // Fetch active ride early to grab polyline if driver didn't provide one
+            $activeRide = Ride::where('driver_id', $driver->id)
+                ->whereIn('status', ['accepted', 'arrived', 'in_progress'])
+                ->first();
+
+            $encodedPolyline = $request->encoded_polyline;
+            if (!$encodedPolyline && $activeRide && $activeRide->route_polyline) {
+                $encodedPolyline = $activeRide->route_polyline;
+            }
+
             // Send response immediately before broadcasting
             $response = response()->json([
                 'success' => true,
@@ -255,7 +265,7 @@ class DriverProfileController extends Controller
 
             // Broadcast event asynchronously (non-blocking)
             try {
-                broadcast(new DriverLocationChange($driver, (float)$request->latitude, (float)$request->longitude, $request->encoded_polyline))->toOthers();
+                broadcast(new DriverLocationChange($driver, (float)$request->latitude, (float)$request->longitude, $encodedPolyline))->toOthers();
             } catch (\Exception $broadcastException) {
                 // Log broadcast error but don't fail the request
                 Log::warning('Failed to broadcast location update: ' . $broadcastException->getMessage());
@@ -264,16 +274,12 @@ class DriverProfileController extends Controller
             // Silent FCM fallback for when the passenger app is backgrounded.
             // Only send during an active ride to respect FCM rate limits.
             try {
-                $activeRide = Ride::where('driver_id', $driver->id)
-                    ->whereIn('status', ['accepted', 'arrived', 'in_progress'])
-                    ->first();
-
                 if ($activeRide) {
                     $this->notificationService->sendLocationUpdate($activeRide->passenger_id, [
                         'driver_id'        => $driver->id,
                         'latitude'         => $request->latitude,
                         'longitude'        => $request->longitude,
-                        'encoded_polyline' => $request->encoded_polyline ?? '',
+                        'encoded_polyline' => $encodedPolyline ?? '',
                     ]);
                 }
             } catch (\Exception $fcmException) {

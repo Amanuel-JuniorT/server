@@ -82,6 +82,9 @@ class RideController extends Controller
                 'destinationAddress' => 'nullable|string',
                 'vehicle_type_id' => 'required|exists:vehicle_types,id',
                 'accepts_pooling' => 'nullable|boolean',
+                'route_polyline' => 'nullable|string',
+                'route_distance' => 'nullable|string',
+                'route_duration' => 'nullable|string',
             ]);
 
             $vehicleType = VehicleType::findOrFail($validated['vehicle_type_id']);
@@ -116,6 +119,9 @@ class RideController extends Controller
                 'cash_payment' => true,
                 'passenger_accepts_pooling' => $request->boolean('accepts_pooling', false),
                 'vehicle_type_id' => $vehicleType->id,
+                'route_polyline' => $validated['route_polyline'] ?? null,
+                'route_distance' => $validated['route_distance'] ?? null,
+                'route_duration' => $validated['route_duration'] ?? null,
             ]);
 
             // 4. Dispatch the background Job to find a driver

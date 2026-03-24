@@ -26,3 +26,6 @@ yarn-error.log
 # Firebase/Google Credentials
 firebase_credentials.json
 google-services.json
+
+# VPS Configuration
+VPS_CONFIGURATION.md
