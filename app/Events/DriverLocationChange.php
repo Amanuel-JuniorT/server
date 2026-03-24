@@ -18,16 +18,18 @@ class DriverLocationChange implements ShouldBroadcastNow
     public $driver;
     public $latitude;
     public $longitude;
+    public $bearing;
     public $encodedPolyline;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($driver, $latitude, $longitude, $encodedPolyline = null)
+    public function __construct($driver, $latitude, $longitude, $bearing = 0, $encodedPolyline = null)
     {
         $this->driver = $driver;
         $this->latitude = $latitude;
         $this->longitude = $longitude;
+        $this->bearing = $bearing;
         $this->encodedPolyline = $encodedPolyline;
     }
 
@@ -67,6 +69,7 @@ class DriverLocationChange implements ShouldBroadcastNow
             'driver_name' => $this->driver->user->name ?? 'Unknown Driver',
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
+            'bearing' => $this->bearing,
             'encoded_polyline' => $this->encodedPolyline,
             'vehicle' => $this->driver->vehicle ? [
                 'plate_number' => $this->driver->vehicle->plate_number,

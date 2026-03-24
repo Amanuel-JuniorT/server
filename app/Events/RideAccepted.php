@@ -21,17 +21,23 @@ class RideAccepted implements ShouldBroadcastNow
     protected $passenger_id;
     protected $driver_id;
     protected $ride_id;
+    protected $route_polyline;
+    protected $pickup_address;
+    protected $destination_address;
 
 
     /**
      * Create a new event instance.
      */
-    public function __construct($passenger_id, $assigned_driver_data, $driver_id = null, $ride_id = null)
+    public function __construct($passenger_id, $assigned_driver_data, $driver_id = null, $ride_id = null, $route_polyline = null, $pickup_address = null, $destination_address = null)
     {
         $this->assigned_driver_data = $assigned_driver_data;
         $this->passenger_id = $passenger_id;
         $this->driver_id = $driver_id;
         $this->ride_id = $ride_id;
+        $this->route_polyline = $route_polyline;
+        $this->pickup_address = $pickup_address;
+        $this->destination_address = $destination_address;
     }
 
     /**
@@ -64,7 +70,10 @@ class RideAccepted implements ShouldBroadcastNow
             'vehicleMake'   => $this->assigned_driver_data['vehicle_make'],
             'vehicleModel'  => $this->assigned_driver_data['vehicle_model'],
             'plateNumber'   => $this->assigned_driver_data['plate_number'],
-            'vehicleColor'  => $this->assigned_driver_data['vehicle_color']
+            'vehicleColor'  => $this->assigned_driver_data['vehicle_color'],
+            'route_polyline' => $this->route_polyline,
+            'pickup_address' => $this->pickup_address,
+            'destination_address' => $this->destination_address
         ];
     }
 }

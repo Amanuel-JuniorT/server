@@ -200,7 +200,7 @@ class RideController extends Controller
                 "Ride Accepted",
                 "Driver {$driverData['driver_name']} has accepted your ride request!",
                 $driverData,
-                new RideAccepted($ride->passenger_id, $driverData, $driver->id, $ride->id),
+                new RideAccepted($ride->passenger_id, $driverData, $driver->id, $ride->id, $ride->route_polyline, $ride->pickup_address, $ride->destination_address),
                 'Passenger'
             );
 
@@ -1045,6 +1045,7 @@ class RideController extends Controller
             'waiting_fee_per_min' => $ride->vehicleType ? (float)$ride->vehicleType->waiting_fee_per_minute : 5.0,
             'started_at' => $ride->started_at,
             'arrived_at' => $ride->arrived_at,
+            'route_polyline' => $ride->route_polyline,
         ];
 
         if ($ride->driver) {

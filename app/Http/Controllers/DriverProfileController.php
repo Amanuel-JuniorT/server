@@ -265,7 +265,8 @@ class DriverProfileController extends Controller
 
             // Broadcast event asynchronously (non-blocking)
             try {
-                broadcast(new DriverLocationChange($driver, (float)$request->latitude, (float)$request->longitude, $encodedPolyline))->toOthers();
+                $bearing = (float)$request->input('bearing', 0);
+                broadcast(new DriverLocationChange($driver, (float)$request->latitude, (float)$request->longitude, $bearing, $encodedPolyline))->toOthers();
             } catch (\Exception $broadcastException) {
                 // Log broadcast error but don't fail the request
                 Log::warning('Failed to broadcast location update: ' . $broadcastException->getMessage());
