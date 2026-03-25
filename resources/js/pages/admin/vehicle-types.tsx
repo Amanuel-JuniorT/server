@@ -35,6 +35,7 @@ export default function VehicleTypes() {
         errors,
         reset,
         clearErrors,
+        transform,
     } = useForm({
         name: '',
         display_name: '',
@@ -84,16 +85,18 @@ export default function VehicleTypes() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (editingType) {
-            // Laravel doesn't support multipart/form-data with PUT easily, so we use POST with _method
+            transform((data) => ({
+                ...data,
+                _method: 'PUT',
+            }));
             post(route('vehicle-types.update', editingType.id), {
-                data: {
-                    ...data,
-                    _method: 'PUT',
-                },
                 onSuccess: () => {
                     setIsDialogOpen(false);
                     reset();
                 },
+                onFinish: () => {
+                    transform((data) => data); // Reset transform
+                }
             });
         } else {
             post(route('vehicle-types.store'), {

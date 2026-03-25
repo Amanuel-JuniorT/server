@@ -53,7 +53,7 @@
     @if ($hasGoogleMapsKey)
         <meta name="google-maps-key" content="{{ $googleMapsKey }}">
         <script id="google-maps-script"
-            src="https://maps.googleapis.com/maps/api/js?key={{ $googleMapsKey }}&libraries=places" defer></script>
+            src="https://maps.googleapis.com/maps/api/js?key={{ $googleMapsKey }}&libraries=places,geometry" defer></script>
         <script>
             (function () {
                 var s = document.getElementById('google-maps-script');
