@@ -73,37 +73,58 @@ export default function SosDetail({ alert }: Props) {
         });
     };
 
-    const markers = [
-        {
-            position: { lat: alert.latitude, lng: alert.longitude },
+    const parseCoord = (val: any) => {
+        const n = typeof val === 'string' ? parseFloat(val) : val;
+        return typeof n === 'number' && !isNaN(n) && isFinite(n) ? n : null;
+    };
+
+    const sosLat = parseCoord(alert.latitude);
+    const sosLng = parseCoord(alert.longitude);
+
+    const markers = [];
+    
+    if (sosLat !== null && sosLng !== null) {
+        markers.push({
+            position: { lat: sosLat, lng: sosLng },
             label: 'SOS',
             title: 'SOS Alert Trigger Location',
-        }
-    ];
-
-    if (alert.ride?.driver?.location) {
-        markers.push({
-            position: { 
-                lat: alert.ride.driver.location.latitude, 
-                lng: alert.ride.driver.location.longitude 
-            },
-            label: 'D',
-            title: `Driver: ${alert.ride.driver.user.name}`,
         });
     }
 
-    if (alert.ride) {
-        markers.push({
-            position: { lat: alert.ride.origin_lat, lng: alert.ride.origin_lng },
-            label: 'P',
-            title: `Pickup: ${alert.ride.pickup_address}`,
-        });
+    if (alert.ride?.driver?.location) {
+        const dLat = parseCoord(alert.ride.driver.location.latitude);
+        const dLng = parseCoord(alert.ride.driver.location.longitude);
+        
+        if (dLat !== null && dLng !== null) {
+            markers.push({
+                position: { lat: dLat, lng: dLng },
+                label: 'D',
+                title: `Driver: ${alert.ride.driver.user.name}`,
+            });
+        }
+    }
 
-        markers.push({
-            position: { lat: alert.ride.destination_lat, lng: alert.ride.destination_lng },
-            label: 'D',
-            title: `Destination: ${alert.ride.destination_address}`,
-        });
+    if (alert.ride) {
+        const pLat = parseCoord(alert.ride.origin_lat);
+        const pLng = parseCoord(alert.ride.origin_lng);
+        const destLat = parseCoord(alert.ride.destination_lat);
+        const destLng = parseCoord(alert.ride.destination_lng);
+
+        if (pLat !== null && pLng !== null) {
+            markers.push({
+                position: { lat: pLat, lng: pLng },
+                label: 'P',
+                title: `Pickup: ${alert.ride.pickup_address}`,
+            });
+        }
+
+        if (destLat !== null && destLng !== null) {
+            markers.push({
+                position: { lat: destLat, lng: destLng },
+                label: 'D',
+                title: `Destination: ${alert.ride.destination_address}`,
+            });
+        }
     }
 
     const getStatusVariant = (status: string) => {
@@ -278,7 +299,10 @@ export default function SosDetail({ alert }: Props) {
                             </CardHeader>
                             <CardContent className="p-0 flex-1 relative">
                                 <GoogleMap 
-                                    center={{ lat: alert.latitude, lng: alert.longitude }} 
+                                    center={{ 
+                                        lat: sosLat ?? 0, 
+                                        lng: sosLng ?? 0 
+                                    }} 
                                     zoom={15}
                                     heightClassName="h-full min-h-[500px]"
                                     markers={markers}

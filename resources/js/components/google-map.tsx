@@ -8,6 +8,16 @@ type MarkerData = {
     title?: string;
 };
 
+const isValidCoordinate = (val: any): val is number => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return typeof num === 'number' && !isNaN(num) && isFinite(num);
+};
+
+const ensureNumber = (val: any): number => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return isValidCoordinate(num) ? num : 0;
+};
+
 type GoogleMapProps = {
     center: LatLngLiteral;
     zoom?: number;
@@ -33,10 +43,13 @@ export default function GoogleMap({ center, zoom = 14, heightClassName = 'h-[360
                 return;
             }
 
-            if (map) return;
+            const validCenter = {
+                lat: ensureNumber(center.lat),
+                lng: ensureNumber(center.lng)
+            };
 
             const instance = new window.google.maps.Map(mapRef.current!, {
-                center,
+                center: validCenter,
                 zoom,
                 mapTypeControl: false,
                 streetViewControl: false,
@@ -51,7 +64,11 @@ export default function GoogleMap({ center, zoom = 14, heightClassName = 'h-[360
 
     useEffect(() => {
         if (!map) return;
-        map.setCenter(center);
+        const lat = ensureNumber(center.lat);
+        const lng = ensureNumber(center.lng);
+        if (isValidCoordinate(lat) && isValidCoordinate(lng)) {
+            map.setCenter({ lat, lng });
+        }
     }, [center.lat, center.lng, map]);
 
     useEffect(() => {
@@ -63,8 +80,16 @@ export default function GoogleMap({ center, zoom = 14, heightClassName = 'h-[360
 
         // Add new markers
         markers.forEach((mark) => {
+            const lat = ensureNumber(mark.position.lat);
+            const lng = ensureNumber(mark.position.lng);
+            
+            if (!isValidCoordinate(lat) || !isValidCoordinate(lng)) {
+                console.warn('GoogleMap: Skipping invalid marker position', mark);
+                return;
+            }
+
             const marker = new window.google.maps.Marker({
-                position: mark.position,
+                position: { lat, lng },
                 map: map,
                 label: mark.label,
                 title: mark.title,
