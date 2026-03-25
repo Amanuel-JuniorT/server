@@ -140,6 +140,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
 
     // SOS Management
     Route::get('sos', [\App\Http\Controllers\AdminSosController::class, 'index'])->name('sos.index');
+    Route::get('sos/{alert}', [\App\Http\Controllers\AdminSosController::class, 'show'])->name('sos.show');
     Route::post('sos/{alert}/resolve', [\App\Http\Controllers\AdminSosController::class, 'resolve'])->name('sos.resolve');
 
     // Ride Details

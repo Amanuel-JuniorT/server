@@ -182,31 +182,38 @@ export default function SosPage({ alerts, stats }: Props) {
                                         </TableCell>
                                         <TableCell>{getStatusBadge(alert.status)}</TableCell>
                                         <TableCell className="text-right">
-                                            {alert.status === 'open' && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    onClick={() => {
-                                                        if (confirm('Resolve this emergency alert?')) {
-                                                            router.post(
-                                                                `/sos/${alert.id}/resolve`,
-                                                                {
-                                                                    status: 'resolved',
-                                                                    note: 'Resolved by Administrator',
-                                                                },
-                                                                {
-                                                                    onSuccess: () => {
-                                                                        // The useEffect above will handle updating localAlerts when props change
-                                                                        router.reload({ only: ['pendingActions', 'stats'] });
+                                            <div className="flex justify-end gap-2">
+                                                <Link href={`/sos/${alert.id}`}>
+                                                    <Button size="sm" variant="outline">
+                                                        View Details
+                                                    </Button>
+                                                </Link>
+                                                {alert.status === 'open' && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        onClick={() => {
+                                                            if (confirm('Resolve this emergency alert?')) {
+                                                                router.post(
+                                                                    `/sos/${alert.id}/resolve`,
+                                                                    {
+                                                                        status: 'resolved',
+                                                                        note: 'Resolved by Administrator',
                                                                     },
-                                                                },
-                                                            );
-                                                        }
-                                                    }}
-                                                >
-                                                    Resolve
-                                                </Button>
-                                            )}
+                                                                    {
+                                                                        onSuccess: () => {
+                                                                            // The useEffect above will handle updating localAlerts when props change
+                                                                            router.reload({ only: ['pendingActions', 'stats'] });
+                                                                        },
+                                                                    },
+                                                                );
+                                                            }
+                                                        }}
+                                                    >
+                                                        Resolve
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))

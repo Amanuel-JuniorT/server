@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-namespace App\Http\Controllers;
-
 use App\Models\SosAlert;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 use App\Events\SosAlertReceived;
 
 class AdminSosController extends Controller
@@ -30,6 +27,15 @@ class AdminSosController extends Controller
         ]);
     }
 
+    public function show(SosAlert $alert)
+    {
+        $alert->load(['user', 'ride.passenger', 'ride.driver.user', 'ride.driver.location', 'resolver']);
+
+        return Inertia::render('sos-detail', [
+            'alert' => $alert
+        ]);
+    }
+
     public function resolve(Request $request, SosAlert $alert)
     {
         $validated = $request->validate([
@@ -39,7 +45,7 @@ class AdminSosController extends Controller
 
         $alert->update([
             'status' => $validated['status'],
-            'resolved_by' => auth()->id(),
+            'resolved_by' => Auth::id(),
             'resolved_at' => now(),
             'resolution_note' => $validated['note'],
         ]);
