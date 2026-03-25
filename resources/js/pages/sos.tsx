@@ -37,6 +37,10 @@ export default function SosPage({ alerts, stats }: Props) {
     const [localAlerts, setLocalAlerts] = useState(alerts.data);
 
     useEffect(() => {
+        setLocalAlerts(alerts.data);
+    }, [alerts.data]);
+
+    useEffect(() => {
         const channel = echo.channel('admin-alerts');
 
         channel.listen('.sos.received', (e: any) => {
@@ -192,7 +196,8 @@ export default function SosPage({ alerts, stats }: Props) {
                                                                 },
                                                                 {
                                                                     onSuccess: () => {
-                                                                        router.reload({ only: ['pendingActions'] });
+                                                                        // The useEffect above will handle updating localAlerts when props change
+                                                                        router.reload({ only: ['pendingActions', 'stats'] });
                                                                     },
                                                                 },
                                                             );
