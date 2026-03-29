@@ -58,7 +58,10 @@ class Ride extends Model
         'notified_drivers_count',
         'route_polyline',
         'route_distance',
-        'route_duration'
+        'route_duration',
+        'applied_promotion_id',
+        'original_fare',
+        'discount_amount'
     ];
 
     public function passenger()
@@ -89,6 +92,11 @@ class Ride extends Model
     public function rating()
     {
         return $this->hasOne(Rating::class);
+    }
+
+    public function appliedPromotion()
+    {
+        return $this->belongsTo(PromotionCampaign::class, 'applied_promotion_id');
     }
 
     /**

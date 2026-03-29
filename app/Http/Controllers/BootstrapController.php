@@ -6,9 +6,17 @@ use Illuminate\Http\Request;
 use App\Models\Ride;
 use App\Models\User;
 use App\Models\VehicleType;
+use App\Services\AppConfigService;
 
 class BootstrapController extends Controller
 {
+  protected $config;
+
+  public function __construct(AppConfigService $config)
+  {
+    $this->config = $config;
+  }
+
   public function  index(Request $request)
   {
     
@@ -26,8 +34,10 @@ class BootstrapController extends Controller
           'maintenance' => false,
           'vehicle_types_version' => (string) (VehicleType::latest('updated_at')->first()?->updated_at?->toIso8601String() ?? '0'),
           'features' => [
-            'pooling' => true,
-            'wallet' => true
+            'pooling' => (bool)$this->config->get('pooling_enabled', true),
+            'wallet' => (bool)$this->config->get('wallet_enabled', true),
+            'referrals' => (bool)$this->config->get('referral_enabled', false),
+            'streaks' => (bool)$this->config->get('streak_enabled', false),
           ]
         ],
       ], 200);
@@ -104,8 +114,10 @@ class BootstrapController extends Controller
       'maintenance' => false,
       'vehicle_types_version' => (string) (VehicleType::latest('updated_at')->first()?->updated_at?->toIso8601String() ?? '0'),
       'features' => [
-        'pooling' => true,
-        'wallet' => true
+        'pooling' => (bool)$this->config->get('pooling_enabled', true),
+        'wallet' => (bool)$this->config->get('wallet_enabled', true),
+        'referrals' => (bool)$this->config->get('referral_enabled', false),
+        'streaks' => (bool)$this->config->get('streak_enabled', false),
       ]
     ];
 

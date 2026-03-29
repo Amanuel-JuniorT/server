@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Services\UnifiedNotificationService;
 use App\Events\NewRideRequested;
 use App\Events\PaymentCompleted;
+use App\Models\UserNotification;
 
 class NotificationController extends Controller
 {
@@ -81,6 +82,7 @@ class NotificationController extends Controller
                 'Driver'
             );
 
+            $sentCount = 0;
             // Manual broadcast for 'admin' channel if needed (for specific UI elements)
             foreach ($targetDrivers as $driver) {
                 try {
@@ -424,5 +426,57 @@ class NotificationController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get notification history for the authenticated user.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        $notifications = UserNotification::where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $notifications
+        ]);
+    }
+
+    /**
+     * Mark a notification as read.
+     */
+    public function markAsRead(Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+        $notification = UserNotification::where('user_id', $user->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $notification->update(['read_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as read'
+        ]);
+    }
+
+    /**
+     * Mark all notifications as read.
+     */
+    public function markAllAsRead(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        UserNotification::where('user_id', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'All notifications marked as read'
+        ]);
     }
 }

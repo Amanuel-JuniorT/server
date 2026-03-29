@@ -196,6 +196,10 @@ class PoolingController extends Controller
 
         $pooling = Pooling::findOrFail($poolingId);
 
+        if ($pooling->status === 'cancelled') {
+            return response()->json(['message' => 'Pool request was cancelled by the requester.'], 400);
+        }
+
         // Verify this is Passenger A
         if ($pooling->ride->passenger_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -264,6 +268,10 @@ class PoolingController extends Controller
         ]);
 
         $pooling = Pooling::findOrFail($poolingId);
+
+        if ($pooling->status === 'cancelled') {
+            return response()->json(['message' => 'Pool request was cancelled by the requester.'], 400);
+        }
 
         // Verify this is the driver
         if ($pooling->driver_id !== $request->user()->driver->id) {
@@ -365,7 +373,10 @@ class PoolingController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $pooling->update(['status' => 'cancelled']);
+        // Cancel all pending pool requests for this passenger to handle silent retries
+        Pooling::where('passenger_id', $request->user()->id)
+            ->whereIn('status', ['pending_passenger_a', 'passenger_a_accepted', 'pending_driver'])
+            ->update(['status' => 'cancelled']);
 
         return response()->json(['message' => 'Pool request cancelled']);
     }

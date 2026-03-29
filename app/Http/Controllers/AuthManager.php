@@ -97,6 +97,7 @@ class AuthManager extends Controller
                 'role' => 'required|string|in:passenger,driver', // Only allow passenger and driver
                 'is_active' => 'boolean',
                 'password' => 'required|string|min:8',
+                'referral_code' => 'nullable|string|exists:users,referral_code',
             ]);
 
             if ($validate->fails()) {
@@ -124,6 +125,23 @@ class AuthManager extends Controller
             $user->is_active = $validated['is_active'] ?? true;
             $user->email = $validated['email'] ?? null;
             $user->password = Hash::make($validated['password']);
+
+            // Handle Referral logic
+            if (!empty($request->referral_code)) {
+                $referrer = User::where('referral_code', $request->referral_code)->first();
+                if ($referrer) {
+                    $user->referred_by_id = $referrer->id;
+                }
+            }
+
+            // Generate unique referral code for the new user
+            $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $validated['name']), 0, 4));
+            $user->referral_code = $baseCode . rand(1000, 9999);
+            
+            // Ensure uniqueness (simple retry once)
+            if (User::where('referral_code', $user->referral_code)->exists()) {
+                $user->referral_code = $baseCode . rand(1000, 9999);
+            }
 
             // $user = Auth::user();
 

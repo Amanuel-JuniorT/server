@@ -72,6 +72,16 @@ class User extends Authenticatable
         return $this->hasMany(FavoriteLocation::class);
     }
 
+    public function userPromotions()
+    {
+        return $this->hasMany(UserPromotion::class);
+    }
+
+    public function userNotifications()
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
     /**
      * Check if user is an employee
      */

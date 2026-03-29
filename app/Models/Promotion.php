@@ -14,6 +14,7 @@ class Promotion extends Model
         'description',
         'image_url',
         'type',
+        'data',
         'expiry_date',
         'is_active'
     ];

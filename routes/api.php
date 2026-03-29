@@ -198,6 +198,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/ride-request', [NotificationController::class, 'sendRideRequestNotification']);
     Route::post('/notifications/payment', [NotificationController::class, 'sendPaymentNotification']);
     Route::get('/notifications/stats', [NotificationController::class, 'getNotificationStats']);
+    
+    // User Notification History
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // FCM Token
     Route::post('/fcm/register', [App\Http\Controllers\FcmTokenController::class, 'register']);
@@ -303,6 +308,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::get('/promotions', [PromotionController::class, 'index']);
 Route::get('/promotions/{id}', [PromotionController::class, 'show']);
 
+// User Wallet & Promotion Application
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/promotions/wallet', [PromotionController::class, 'userWallet']);
+    Route::post('/promotions/apply-code', [PromotionController::class, 'applyCode']);
+});
+
 // Admin routes - protected
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/admin/promotions', [PromotionController::class, 'adminIndex']);
@@ -310,6 +321,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/admin/promotions/{id}', [PromotionController::class, 'update']);
     Route::delete('/admin/promotions/{id}', [PromotionController::class, 'destroy']);
     Route::patch('/admin/promotions/{id}/toggle', [PromotionController::class, 'toggleActive']);
+
+    // System Configurations
+    Route::get('/admin/config/rewards', [\App\Http\Controllers\AdminConfigController::class, 'getRewardsConfig']);
+    Route::post('/admin/config/update', [\App\Http\Controllers\AdminConfigController::class, 'updateConfig']);
 });
 
 // Other Public Routes (outside group)

@@ -39,7 +39,7 @@ class RetryPoolMatch implements ShouldQueue
      */
     public function handle(UnifiedNotificationService $notificationService): void
     {
-        $failedPooling = Pooling::with(['passenger'])->find($this->poolingId);
+        $failedPooling = Pooling::with(['passenger', 'ride'])->find($this->poolingId);
 
         if (!$failedPooling) {
             Log::warning("RetryPoolMatch: Pooling {$this->poolingId} not found.");
@@ -52,6 +52,7 @@ class RetryPoolMatch implements ShouldQueue
         }
 
         $pooler = $failedPooling->passenger;
+        $originalRide = $failedPooling->ride;
 
         if ($this->attempt > self::MAX_RETRIES) {
             Log::info("RetryPoolMatch: Max retries ({$this->attempt}) reached for pooler #{$pooler->id}. Giving up.");
@@ -89,6 +90,7 @@ class RetryPoolMatch implements ShouldQueue
             ->where('status', 'accepted')
             ->where('is_pool_enabled', true)
             ->where('passenger_accepts_pooling', true)
+            ->where('vehicle_type_id', $originalRide->vehicle_type_id)
             ->whereNotIn('id', $excludedRideIds)
             ->whereBetween('destination_lat', [
                 $failedPooling->destination_lat - 0.1,

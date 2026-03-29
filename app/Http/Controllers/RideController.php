@@ -33,9 +33,14 @@ use App\Models\SosAlert;
 use App\Events\SosAlertReceived;
 
 use App\Services\UnifiedNotificationService;
+use App\Services\PromotionEngineService;
+use App\Services\PromotionAutomationService;
 
 class RideController extends Controller
 {
+    protected $notificationService;
+    protected $promotionService;
+    protected $automationService;
     /**
      * Get available vehicle types with pricing.
      */
@@ -57,8 +62,14 @@ class RideController extends Controller
     }
 
     public function __construct(
-        private readonly UnifiedNotificationService $notificationService
-    ) {}
+        UnifiedNotificationService $notificationService,
+        PromotionEngineService $promotionService,
+        PromotionAutomationService $automationService
+    ) {
+        $this->notificationService = $notificationService;
+        $this->promotionService = $promotionService;
+        $this->automationService = $automationService;
+    }
 
     /**
      * Passenger requests a ride.
@@ -89,13 +100,16 @@ class RideController extends Controller
 
             $vehicleType = VehicleType::findOrFail($validated['vehicle_type_id']);
 
-            $fare = $this->calculateFare(
+            $fareData = $this->calculateFare(
                 $validated['originLat'],
                 $validated['originLng'],
                 $validated['destLat'],
                 $validated['destLng'],
-                $vehicleType
+                $vehicleType,
+                $user
             );
+
+            $fare = $fareData['final_fare'];
 
             // 2. Geocoding fallback for addresses
             $geocodingService = new GeocodingService();
@@ -113,6 +127,9 @@ class RideController extends Controller
                 'pickup_address' => $pickupAddress,
                 'destination_address' => $destinationAddress,
                 'price' => $fare,
+                'original_fare' => $fareData['original_fare'] ?? $fare,
+                'discount_amount' => $fareData['discount_amount'] ?? 0,
+                'applied_promotion_id' => $fareData['applied_promotion_id'] ?? null,
                 'status' => 'requested',
                 'requested_at' => now(),
                 'rejected_driver_ids' => [],
@@ -424,6 +441,11 @@ class RideController extends Controller
                     'price' => $fareAmount,
                 ]);
 
+                // Handle Promotion Usage
+                if ($ride->applied_promotion_id) {
+                    $this->promotionService->markAsUsed($ride->passenger_id, $ride->applied_promotion_id, $ride->id, $ride->discount_amount);
+                }
+
                 // Handle driver status
                 if ($ride->isPooled()) {
                     $poolPartner = Ride::where('id', $ride->pool_partner_ride_id)
@@ -447,6 +469,9 @@ class RideController extends Controller
                     'Passenger'
                 );
                 $this->sendPaymentNotification($ride, $fareAmount, 'cash');
+
+                // Trigger automated rewards (Streaks, etc)
+                $this->automationService->handleRideCompleted($ride);
 
                 $responsePayload = [
                     'message' => 'Ride completed successfully',
@@ -631,6 +656,11 @@ class RideController extends Controller
                 'completed_at' => now(),
             ]);
 
+            // Handle Promotion Usage
+            if ($ride->applied_promotion_id) {
+                $this->promotionService->markAsUsed($ride->passenger_id, $ride->applied_promotion_id, $ride->id, $ride->discount_amount);
+            }
+
             // Handle Driver status (same logic as cash)
             $driverModel = $ride->driver;
             if ($ride->isPooled()) {
@@ -644,6 +674,9 @@ class RideController extends Controller
             $driverModel->save();
 
             DB::commit();
+
+            // Trigger automated rewards (Streaks, Referrals)
+            $this->automationService->handleRideCompleted($ride);
 
             // Broadcast events and notify driver
             broadcast(new RideEnded($ride))->toOthers();
@@ -1170,13 +1203,16 @@ class RideController extends Controller
         $vehicleType = VehicleType::find($vehicleTypeId) ?? VehicleType::first();
 
         // Calculate fare
-        $fare = $this->calculateFare(
+        $fareData = $this->calculateFare(
             $validated['originLat'],
             $validated['originLng'],
             $validated['destLat'],
             $validated['destLng'],
-            $vehicleType
+            $vehicleType,
+            $validated['passenger_id'] ? User::find($validated['passenger_id']) : null
         );
+
+        $fare = $fareData['final_fare'];
 
         // Get addresses using reverse geocoding if not provided
         $geocodingService = new GeocodingService();
@@ -1227,7 +1263,11 @@ class RideController extends Controller
                 'destination_lng' => $validated['destLng'],
                 'pickup_address'  => $pickupAddress,
                 'destination_address' => $destinationAddress,
+                'payload'         => null,
                 'price'           => $fare,
+                'original_fare'   => $fareData['original_fare'] ?? $fare,
+                'discount_amount' => $fareData['discount_amount'] ?? 0,
+                'applied_promotion_id' => $fareData['applied_promotion_id'] ?? null,
                 'status'          => 'in_progress',
                 'started_at'      => now(),
                 'is_straight_hail' => true,
@@ -1338,32 +1378,49 @@ class RideController extends Controller
     /**
      * Fare calculation based on distance and vehicle type.
      */
-    private function calculateFare($lat1, $lng1, $lat2, $lng2, $vehicleType = null)
+    private function calculateFare($lat1, $lng1, $lat2, $lng2, $vehicleType = null, ?User $user = null)
     {
         if (!$vehicleType) {
             $vehicleType = VehicleType::where('name', 'economy')->first() ?? VehicleType::first();
         }
 
+        $distance = $this->calculateDistance($lat1, $lng1, $lat2, $lng2);
+
         if (!$vehicleType) {
             // Fallback to hardcoded values if DB is empty
             $baseFare = 140;
             $perKmRate = 25;
-            $distance = $this->calculateDistance($lat1, $lng1, $lat2, $lng2);
-            return round($baseFare + ($perKmRate * $distance), 2);
+            $originalFare = round($baseFare + ($perKmRate * $distance), 2);
+        } else {
+            // Use an average speed (e.g., 25 km/h) to estimate duration in minutes
+            $estimatedDuration = ($distance / 25) * 60;
+
+            // More realistic fare calculation: base + (rate_km * dist) + (rate_min * duration)
+            $fare = $vehicleType->base_fare
+                + ($vehicleType->price_per_km * $distance)
+                + ($vehicleType->price_per_minute * $estimatedDuration);
+
+            // Ensure minimum fare
+            $originalFare = round(max($fare, $vehicleType->minimum_fare), 2);
         }
 
-        $distance = $this->calculateDistance($lat1, $lng1, $lat2, $lng2);
+        // Apply Promotion if user is provided
+        if ($user) {
+            $promoResult = $this->promotionService->applyBestPromotion($user, $originalFare);
+            return [
+                'original_fare'        => $originalFare,
+                'discount_amount'      => $promoResult['discount_amount'],
+                'final_fare'           => $promoResult['final_fare'],
+                'applied_promotion_id' => $promoResult['applied_promotion_id']
+            ];
+        }
 
-        // Use an average speed (e.g., 25 km/h) to estimate duration in minutes
-        $estimatedDuration = ($distance / 25) * 60;
-
-        // More realistic fare calculation: base + (rate_km * dist) + (rate_min * duration)
-        $fare = $vehicleType->base_fare
-            + ($vehicleType->price_per_km * $distance)
-            + ($vehicleType->price_per_minute * $estimatedDuration);
-
-        // Ensure minimum fare
-        return round(max($fare, $vehicleType->minimum_fare), 2);
+        return [
+            'original_fare'        => $originalFare,
+            'discount_amount'      => 0,
+            'final_fare'           => $originalFare,
+            'applied_promotion_id' => null
+        ];
     }
 
     /**

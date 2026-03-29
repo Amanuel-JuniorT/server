@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DeviceToken;
 use App\Models\User;
+use App\Models\UserNotification;
 use Illuminate\Support\Facades\Log;
 
 class UnifiedNotificationService
@@ -25,6 +26,19 @@ class UnifiedNotificationService
     public function notifyUser($user, string $title, string $body, array $data = [], $event = null, string $app = 'Passenger')
     {
         $userId = $user instanceof User ? $user->id : $user;
+
+        // 0. Persist to Database (History)
+        try {
+            UserNotification::create([
+                'user_id' => $userId,
+                'title' => $title,
+                'body' => $body,
+                'data' => $data,
+                'type' => $data['type'] ?? 'general'
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to persist notification for user {$userId}: " . $e->getMessage());
+        }
 
         // 1. Broadcast if an event is provided
         if ($event) {
@@ -59,6 +73,21 @@ class UnifiedNotificationService
      */
     public function notifyUsers(array $userIds, string $title, string $body, array $data = [], $event = null, string $app = 'Driver')
     {
+        // 0. Persist to Database for each user
+        foreach ($userIds as $uId) {
+            try {
+                UserNotification::create([
+                    'user_id' => $uId,
+                    'title' => $title,
+                    'body' => $body,
+                    'data' => $data,
+                    'type' => $data['type'] ?? 'general'
+                ]);
+            } catch (\Exception $e) {
+                Log::error("Failed to persist bulk notification for user {$uId}: " . $e->getMessage());
+            }
+        }
+
         // 1. Broadcast globally or per-user if event is specific
         // if ($event) {
         //     broadcast($event);
