@@ -65,7 +65,14 @@ export default function RewardsConfigPage() {
     };
 
     const handleInputChange = (key: string, value: string) => {
-        setConfigs((prev) => prev.map((item) => (item.key === key ? { ...item, value } : item)));
+        // Simple numeric cleaning if the key relates to amounts or targets
+        const cleanValue = (key.includes('amount') || key.includes('target')) 
+            ? value.replace(/[^0-9.]/g, '') 
+            : value;
+            
+        setConfigs((prev) => 
+            prev.map((item) => (item.key === key ? { ...item, value: cleanValue } : item))
+        );
     };
 
     const handleSave = async () => {
@@ -75,27 +82,32 @@ export default function RewardsConfigPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
                 },
                 body: JSON.stringify({
-                    settings: configs.map((c) => ({ key: c.key, value: c.value })),
+                    settings: configs.map((c) => ({ key: c.key, value: String(c.value) })),
                 }),
             });
 
-            if (res.ok) {
+            const result = await res.json();
+            if (res.ok && result.success) {
                 toast.success('Settings saved successfully');
                 fetchConfigs(); // Refresh to confirm
             } else {
-                throw new Error('Failed to save settings');
+                throw new Error(result.message || 'Failed to save settings');
             }
-        } catch (error) {
-            toast.error('Error saving settings');
+        } catch (error: any) {
+            toast.error(error.message || 'Error saving settings');
         } finally {
             setIsSaving(false);
         }
     };
 
-    const getConfig = (key: string) => configs.find((c) => c.key === key);
+    const getConfigValue = (key: string) => {
+        const item = configs.find((c) => c.key === key);
+        return item ? item.value : '';
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -135,7 +147,7 @@ export default function RewardsConfigPage() {
                                     </Label>
                                     <Switch
                                         id="referral_enabled"
-                                        checked={getConfig('referral_enabled')?.value === 'true'}
+                                        checked={getConfigValue('referral_enabled') === 'true'}
                                         onCheckedChange={(checked) => handleToggle('referral_enabled', checked)}
                                     />
                                 </div>
@@ -143,8 +155,9 @@ export default function RewardsConfigPage() {
                                     <Label htmlFor="referral_reward_amount">Reward Percentage (%)</Label>
                                     <Input
                                         id="referral_reward_amount"
-                                        type="number"
-                                        value={getConfig('referral_reward_amount')?.value || ''}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={getConfigValue('referral_reward_amount')}
                                         onChange={(e) => handleInputChange('referral_reward_amount', e.target.value)}
                                         placeholder="e.g., 20"
                                     />
@@ -170,7 +183,7 @@ export default function RewardsConfigPage() {
                                     </Label>
                                     <Switch
                                         id="streak_enabled"
-                                        checked={getConfig('streak_enabled')?.value === 'true'}
+                                        checked={getConfigValue('streak_enabled') === 'true'}
                                         onCheckedChange={(checked) => handleToggle('streak_enabled', checked)}
                                     />
                                 </div>
@@ -178,8 +191,9 @@ export default function RewardsConfigPage() {
                                     <Label htmlFor="streak_target_rides">Target Rides (7 Days)</Label>
                                     <Input
                                         id="streak_target_rides"
-                                        type="number"
-                                        value={getConfig('streak_target_rides')?.value || ''}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={getConfigValue('streak_target_rides')}
                                         onChange={(e) => handleInputChange('streak_target_rides', e.target.value)}
                                         placeholder="e.g., 5"
                                     />
