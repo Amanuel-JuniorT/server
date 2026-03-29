@@ -26,6 +26,7 @@ import {
     Map,
     Send,
     Settings,
+    Sparkles,
     Ticket,
     User,
     Users,
@@ -69,6 +70,7 @@ const superAdminNavItems = [
         group: 'System',
         items: [
             { title: 'Promotions', href: '/promotions', icon: Ticket },
+            { title: 'Rewards Config', href: '/admin/config/rewards', icon: Sparkles },
             { title: 'Notifications', href: '/notifications', icon: Bell },
             { title: 'System Logs', href: '/logs', icon: Activity },
             { title: 'Audit Trail', href: '/audit', icon: FileText },

@@ -98,6 +98,11 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
         return Inertia::render('promotions');
     })->name('promotions');
 
+    // Rewards Configuration Page
+    Route::get('admin/config/rewards', function () {
+        return Inertia::render('admin/rewards-config');
+    })->name('admin.config.rewards');
+
     // Company Ride Groups (NEW)
     Route::get('companies/{id}/ride-groups', function ($id) {
         return Inertia::render('company-ride-groups', ['companyId' => $id]);
