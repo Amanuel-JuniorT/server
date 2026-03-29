@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\SendFcmMessage;
 use App\Models\DeviceToken;
+use App\Models\UserNotification;
 use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -96,24 +97,46 @@ class AdminNotificationController extends Controller
       if ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
         $channel = 'passenger.' . $validated['user_id'];
       } elseif ($validated['target'] === 'all_drivers') {
-        $channel = 'drivers_broadcast'; // Example channel
+        $channel = 'drivers_broadcast';
       }
 
       $tokens = [];
+      $userIds = [];
+
       if ($validated['target'] === 'all_passengers') {
-        // Fetch all tokens for Passengers from users table
-        $tokens = \App\Models\User::where('role', 'passenger')->whereNotNull('fcm_token')->pluck('fcm_token')->all();
+        $users = \App\Models\User::where('role', 'passenger')->get();
+        $tokens = $users->whereNotNull('fcm_token')->pluck('fcm_token')->filter()->values()->all();
+        $userIds = $users->pluck('id')->all();
       } elseif ($validated['target'] === 'all_drivers') {
-        // Fetch all tokens for Drivers from users table
-        $tokens = \App\Models\User::where('role', 'driver')->whereNotNull('fcm_token')->pluck('fcm_token')->all();
+        $users = \App\Models\User::where('role', 'driver')->get();
+        $tokens = $users->whereNotNull('fcm_token')->pluck('fcm_token')->filter()->values()->all();
+        $userIds = $users->pluck('id')->all();
       } elseif ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
-        // Fetch tokens for specific user
-        $tokens = \App\Models\User::where('id', $validated['user_id'])->whereNotNull('fcm_token')->pluck('fcm_token')->all();
+        $user = \App\Models\User::find($validated['user_id']);
+        if ($user) {
+          if ($user->fcm_token) $tokens = [$user->fcm_token];
+          $userIds = [$user->id];
+        }
       } elseif ($validated['target'] === 'tokens' && !empty($validated['tokens'])) {
         $tokens = $validated['tokens'];
       }
 
       $tokens = array_values(array_unique(array_filter($tokens)));
+
+      // Persist to user_notifications for each targeted user
+      foreach ($userIds as $uid) {
+        try {
+          \App\Models\UserNotification::create([
+            'user_id' => $uid,
+            'title'   => $validated['title'],
+            'body'    => $validated['body'],
+            'data'    => $validated['data'] ?? [],
+            'type'    => $validated['data']['type'] ?? 'admin',
+          ]);
+        } catch (\Exception $e) {
+          Log::warning("Failed to persist admin notification for user {$uid}: " . $e->getMessage());
+        }
+      }
 
       $fcmResult = [];
       if (!empty($tokens)) {
@@ -148,7 +171,7 @@ class AdminNotificationController extends Controller
         'success' => true,
         'message' => 'Broadcast sent to ' . $channel,
         'fcm_count' => count($tokens),
-        // 'fcm_result' => $fcmResult // Optional: include for debugging
+        'db_saved' => count($userIds),
       ]);
     } catch (\Exception $e) {
       return response()->json([

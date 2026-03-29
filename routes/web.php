@@ -100,7 +100,8 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
 
     // Rewards Configuration Page
     Route::get('admin/config/rewards', function () {
-        return Inertia::render('admin/rewards-config');
+        $configs = \App\Models\SystemConfiguration::where('group', 'rewards')->get();
+        return Inertia::render('admin/rewards-config', ['configs' => $configs]);
     })->name('admin.config.rewards');
 
     // Company Ride Groups (NEW)

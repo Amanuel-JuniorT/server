@@ -5,10 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { Loader2, Save, Sparkles, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 interface ConfigItem {
     id: number;
@@ -31,32 +32,17 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function RewardsConfigPage() {
-    const [configs, setConfigs] = useState<ConfigItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { configs: initialConfigs } = usePage<{ configs: ConfigItem[] }>().props;
+    const [configs, setConfigs] = useState<ConfigItem[]>(initialConfigs ?? []);
+    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    const fetchConfigs = async () => {
-        try {
-            const res = await fetch('/api/admin/config/rewards', {
-                headers: {
-                    Accept: 'application/json',
-                },
-            });
-            if (res.ok) {
-                const result = await res.json();
-                setConfigs(result.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch configurations', error);
-            toast.error('Failed to load settings');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    // Sync if props change (e.g., after Inertia visit)
     useEffect(() => {
-        fetchConfigs();
-    }, []);
+        if (initialConfigs) {
+            setConfigs(initialConfigs);
+        }
+    }, [initialConfigs]);
 
     const handleToggle = (key: string, checked: boolean) => {
         setConfigs((prev) =>
@@ -78,27 +64,18 @@ export default function RewardsConfigPage() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const res = await fetch('/api/admin/config/update', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                },
-                body: JSON.stringify({
-                    settings: configs.map((c) => ({ key: c.key, value: String(c.value) })),
-                }),
+            const response = await axios.post('/api/admin/config/update', {
+                settings: configs.map((c) => ({ key: c.key, value: String(c.value) })),
             });
 
-            const result = await res.json();
-            if (res.ok && result.success) {
+            if (response.data.success) {
                 toast.success('Settings saved successfully');
-                fetchConfigs(); // Refresh to confirm
             } else {
-                throw new Error(result.message || 'Failed to save settings');
+                throw new Error(response.data.message || 'Failed to save settings');
             }
         } catch (error: any) {
-            toast.error(error.message || 'Error saving settings');
+            const msg = error?.response?.data?.message || error?.message || 'Error saving settings';
+            toast.error(msg);
         } finally {
             setIsSaving(false);
         }
