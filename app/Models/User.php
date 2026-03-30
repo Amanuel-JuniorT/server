@@ -14,7 +14,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasApiTokens;
 
 
-    protected $fillable = ['name', 'email', 'phone', 'password', 'role', 'is_active', 'is_employee', 'company_id', 'company_name', 'fcm_token', 'privacy_settings'];
+    protected $fillable = ['name', 'email', 'phone', 'password', 'role', 'is_active', 'is_employee', 'company_id', 'company_name', 'fcm_token', 'privacy_settings', 'referral_code', 'referred_by_id', 'streak_progress'];
 
     protected $casts = [
         'privacy_settings' => 'array',

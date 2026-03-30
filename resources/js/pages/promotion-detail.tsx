@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, Link } from '@inertiajs/react';
@@ -44,12 +45,12 @@ export default function PromotionDetailPage({ promotion }: { promotion: Promotio
         });
     };
 
-    const handleBroadcast = async () => {
-        if (!confirm(`Are you sure you want to broadcast "${promotion.title}" via Push Notification to all active passengers?`)) return;
+    const handleBroadcast = async (targetAudience: 'all_passengers' | 'all_drivers') => {
+        if (!confirm(`Are you sure you want to broadcast "${promotion.title}" via Push Notification to ${targetAudience}?`)) return;
 
         try {
             const res = await window.axios.post('/admin/notifications/send', {
-                target: 'all_passengers',
+                target: targetAudience,
                 title: promotion.title,
                 body: promotion.description,
                 data: {
@@ -89,10 +90,23 @@ export default function PromotionDetailPage({ promotion }: { promotion: Promotio
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button onClick={handleBroadcast} className="shadow-md bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6">
-                            <Send className="mr-2 h-4 w-4" />
-                            Broadcast Push
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button className="shadow-md bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6">
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Broadcast Push
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleBroadcast('all_passengers')} className="cursor-pointer">
+                                    Send to All Passengers
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleBroadcast('all_drivers')} className="cursor-pointer">
+                                    Send to All Drivers
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <Button variant="destructive" onClick={handleDelete} className="shadow-md rounded-full px-6">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete

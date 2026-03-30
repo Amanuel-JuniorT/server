@@ -54,30 +54,36 @@ class PromotionAutomationService
     {
         UserActivityStat::updateOrCreate(
             ['user_id' => $ride->passenger_id, 'date' => now()->toDateString()],
-            ['rides_completed_count' => \DB::raw('rides_completed_count + 1')]
+            ['rides_completed_count' => \Illuminate\Support\Facades\DB::raw('rides_completed_count + 1')]
         );
     }
 
     /**
      * Check if user reached a streak milestone.
+     * Uses the user's streak_progress counter (reset after reward).
      */
     protected function checkStreakReward(User $user)
     {
-        $target = $this->config->get('streak_target_rides', 5);
-        
-        $totalRidesInWeek = UserActivityStat::where('user_id', $user->id)
-            ->where('date', '>=', now()->subDays(7)->toDateString())
-            ->sum('rides_completed_count');
+        $target = (int) $this->config->get('streak_target_rides', 5);
 
-        if ($totalRidesInWeek >= $target) {
-            // Check if already awarded this week to avoid double-dipping
+        // Atomically increment the counter
+        $user->increment('streak_progress');
+        $user->refresh();
+        $currentProgress = (int) $user->streak_progress;
+
+        Log::info("Streak progress for User {$user->id}: {$currentProgress}/{$target}");
+
+        if ($currentProgress >= $target) {
+            // Guard: avoid double-rewarding within same week
             $alreadyAwarded = UserPromotion::where('user_id', $user->id)
                 ->where('metadata->type', 'streak_reward')
                 ->where('created_at', '>=', now()->subDays(7))
                 ->exists();
 
             if (!$alreadyAwarded) {
-                $this->issueReward($user, 'streak_reward', "Streak Achievement!");
+                $this->issueReward($user, 'streak_reward', "🏆 You completed {$target} rides! Your reward is ready.");
+                // Reset so the next cycle starts fresh
+                $user->update(['streak_progress' => 0]);
             }
         }
     }

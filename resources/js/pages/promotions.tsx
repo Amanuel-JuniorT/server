@@ -72,13 +72,12 @@ export default function PromotionsPage() {
         });
     };
 
-    const handlePushNotification = async (promotion: Promotion) => {
-        if (!confirm(`Send push notification for "${promotion.title}" to ALL passengers?`)) return;
+    const handlePushNotification = async (promotion: Promotion, targetAudience: 'all_passengers' | 'all_drivers') => {
+        if (!confirm(`Broadcast "${promotion.title}" to ${targetAudience}? This cannot be undone.`)) return;
 
         try {
-            // Notifications are still sent via raw Axios/fetch POST since it's an action, but the route is in web.php
             const res = await window.axios.post('/admin/notifications/send', {
-                target: 'all_passengers', 
+                target: targetAudience, 
                 title: promotion.title,
                 body: promotion.description,
                 data: {
@@ -90,10 +89,10 @@ export default function PromotionsPage() {
             });
 
             if (res.data.success) {
-                toast.success('Broadcast sent successfully!');
+                toast.success('Broadcast transmission complete!');
             }
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Error sending notification');
+            toast.error(error.response?.data?.message || 'Error executing broadcast logic');
         }
     };
 
@@ -248,15 +247,15 @@ export default function PromotionsPage() {
                                             </TableCell>
                                             <TableCell className="text-right align-middle">
                                                 <div className="flex justify-end gap-1.5">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                                        onClick={() => handlePushNotification(promo)}
-                                                        title="Broadcast Push Notification"
-                                                    >
-                                                        <Bell className="h-4 w-4" />
-                                                    </Button>
+                                                    <Select onValueChange={(val: 'all_passengers' | 'all_drivers') => handlePushNotification(promo, val)}>
+                                                        <SelectTrigger className="w-9 h-9 border-none bg-blue-50 text-blue-600 hover:text-blue-800 hover:bg-blue-100 p-0 flex items-center justify-center [&>svg]:hidden ring-0 focus:ring-0">
+                                                            <Bell className="h-4 w-4" />
+                                                        </SelectTrigger>
+                                                        <SelectContent align="end">
+                                                            <SelectItem value="all_passengers">Blast Passengers</SelectItem>
+                                                            <SelectItem value="all_drivers">Blast Drivers</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                     <Link href={`/promotions/${promo.id}`}>
                                                         <Button
                                                             variant="ghost"

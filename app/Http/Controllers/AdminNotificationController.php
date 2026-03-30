@@ -20,7 +20,7 @@ class AdminNotificationController extends Controller
   public function send(Request $request)
   {
     $validated = $request->validate([
-      'target' => 'required|in:all_passengers,user_id,tokens',
+      'target' => 'required|in:all_passengers,all_drivers,user_id,tokens',
       'user_id' => 'nullable|integer',
       'tokens' => 'nullable|array',
       'title' => 'required|string|max:255',
@@ -33,6 +33,8 @@ class AdminNotificationController extends Controller
     $channel = 'promotions';
     if ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
       $channel = 'passenger.' . $validated['user_id'];
+    } elseif ($validated['target'] === 'all_drivers') {
+      $channel = 'drivers_broadcast';
     }
 
     // $tokens = [];
