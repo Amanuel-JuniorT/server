@@ -36,7 +36,8 @@ class BootstrapController extends Controller
           'features' => [
             'pooling' => (bool)$this->config->get('pooling_enabled', true),
             'wallet' => (bool)$this->config->get('wallet_enabled', true),
-            'referrals' => (bool)$this->config->get('referral_enabled', false),
+            'referral' => (bool)$this->config->get('referral_enabled', false),
+            'promo' => true,
             'streaks' => (bool)$this->config->get('streak_enabled', false),
           ]
         ],
@@ -116,7 +117,8 @@ class BootstrapController extends Controller
       'features' => [
         'pooling' => (bool)$this->config->get('pooling_enabled', true),
         'wallet' => (bool)$this->config->get('wallet_enabled', true),
-        'referrals' => (bool)$this->config->get('referral_enabled', false),
+        'referral' => (bool)$this->config->get('referral_enabled', false),
+        'promo' => true,
         'streaks' => (bool)$this->config->get('streak_enabled', false),
       ]
     ];

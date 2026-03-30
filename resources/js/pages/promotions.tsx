@@ -8,9 +8,9 @@ import { SimpleTable as Table, TableBody, TableCell, TableHead, TableHeader, Tab
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { Bell, Loader2, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
+import { Bell, Eye, EyeIcon, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 interface Promotion {
@@ -36,13 +36,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function PromotionsPage() {
-    const [promotions, setPromotions] = useState<Promotion[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Receive promotions via standard Inertia Page props instead of a raw API fetch
+    const { promotions } = usePage<{ promotions: Promotion[] }>().props;
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [isSending, setIsSending] = useState(false);
 
-    // Form state
-    const [formData, setFormData] = useState({
+    // Using Inertia useForm for seamless server-side validation and form handling
+    const { data, setData, post, processing, reset, errors } = useForm({
         title: '',
         description: '',
         image_url: '',
@@ -51,179 +50,89 @@ export default function PromotionsPage() {
         is_active: true,
     });
 
-    const fetchPromotions = async () => {
-        try {
-            const res = await fetch('/admin/promotions/list', {
-                headers: {
-                    Accept: 'application/json',
-                },
-            });
-            // Note: In Inertia app, standard fetch might rely on cookies.
-            // If the API allows Sanctum cookie auth, this should work.
-            // Otherwise we might need to use Inertia's usePage props if the data was passed from controller used in web.php
-            // But since strict separation isn't enforced in this file, we'll try fetch.
-
-            // Actually, if we are in the same session, fetch to /api might work if middleware allows.
-            // Let's assume standard Axios/Fetch works with cookies.
-
-            if (res.ok) {
-                const data = await res.json();
-                setPromotions(data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch promotions', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchPromotions();
-    }, []);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSelectChange = (name: string, value: string) => {
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSending(true);
-
-        try {
-            // 1. Create Promotion
-            const res = await fetch('/admin/promotions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || 'Failed to create promotion');
+        post('/admin/promotions', {
+            onSuccess: () => {
+                toast.success('Promotion created successfully');
+                setIsCreateOpen(false);
+                reset();
+            },
+            onError: (errors) => {
+                Object.values(errors).forEach(err => toast.error(err));
             }
-
-            const createdPromotion = await res.json(); // Assuming returns { promotion: ... } or just ...
-
-            toast.success('Promotion created successfully');
-            setIsCreateOpen(false);
-            setFormData({
-                title: '',
-                description: '',
-                image_url: '',
-                type: 'promotion',
-                expiry_date: '',
-                is_active: true,
-            });
-            fetchPromotions();
-
-            // Optional: Ask to send push notification
-            // For now, we just create it.
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setIsSending(false);
-        }
+        });
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = (id: number) => {
         if (!confirm('Are you sure you want to delete this promotion?')) return;
-
-        try {
-            const res = await fetch(`/admin/promotions/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                },
-            });
-
-            if (res.ok) {
-                toast.success('Promotion deleted');
-                setPromotions((prev) => prev.filter((p) => p.id !== id));
-            } else {
-                toast.error('Failed to delete promotion');
-            }
-        } catch (error) {
-            toast.error('Error deleting promotion');
-        }
+        router.delete(`/admin/promotions/${id}`, {
+            onSuccess: () => toast.success('Promotion deleted'),
+            onError: () => toast.error('Failed to delete promotion'),
+        });
     };
 
     const handlePushNotification = async (promotion: Promotion) => {
         if (!confirm(`Send push notification for "${promotion.title}" to ALL passengers?`)) return;
 
         try {
-            const res = await fetch('/admin/notifications/send', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
+            // Notifications are still sent via raw Axios/fetch POST since it's an action, but the route is in web.php
+            const res = await window.axios.post('/admin/notifications/send', {
+                target: 'all_passengers', 
+                title: promotion.title,
+                body: promotion.description,
+                data: {
+                    type: 'promotion',
+                    promotion_id: String(promotion.id),
+                    image: promotion.image_url || '',
                 },
-                body: JSON.stringify({
-                    target: 'all_passengers', // Broadcasting to all
-                    title: promotion.title,
-                    body: promotion.description,
-                    data: {
-                        type: 'promotion',
-                        promotion_id: String(promotion.id),
-                        image: promotion.image_url || '',
-                    },
-                    high_priority: true,
-                }),
+                high_priority: true,
             });
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                console.error('Notification failed:', errorData);
-                throw new Error(errorData.message || 'Failed to send notification');
+            if (res.data.success) {
+                toast.success('Broadcast sent successfully!');
             }
-        } catch (error) {
-            toast.error('Error sending notification');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Error sending notification');
         }
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Promotions" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+            <div className="flex flex-1 flex-col gap-4 p-6 lg:gap-8 lg:p-10">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Promotions & Announcements</h1>
-                        <p className="text-muted-foreground">Manage ongoing promotions and send alerts to users.</p>
+                        <h1 className="text-3xl font-bold tracking-tight">Promotions & Announcements</h1>
+                        <p className="text-muted-foreground mt-2">Manage ongoing promotions, send push blasts, and review promotional timelines.</p>
                     </div>
                     <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                         <DialogTrigger asChild>
-                            <Button>
-                                <Plus className="mr-2 h-4 w-4" />
+                            <Button size="lg" className="shadow-lg">
+                                <Plus className="mr-2 h-5 w-5" />
                                 Create Promotion
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[500px]">
                             <DialogHeader>
                                 <DialogTitle>Create New Promotion</DialogTitle>
-                                <DialogDescription>Add a new promotion or announcement.</DialogDescription>
+                                <DialogDescription>Build a new campaign or announcement for your users.</DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleSubmit} className="space-y-4 py-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="title">Title</Label>
                                     <Input
                                         id="title"
-                                        name="title"
-                                        value={formData.title}
-                                        onChange={handleChange}
+                                        value={data.title}
+                                        onChange={(e) => setData('title', e.target.value)}
                                         required
                                         placeholder="e.g., 50% Off First Ride"
                                     />
+                                    {errors.title && <p className="text-sm text-red-500">{errors.title}</p>}
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="type">Type</Label>
-                                    <Select value={formData.type} onValueChange={(val) => handleSelectChange('type', val)}>
+                                    <Select value={data.type} onValueChange={(val) => setData('type', val)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select type" />
                                         </SelectTrigger>
@@ -238,31 +147,30 @@ export default function PromotionsPage() {
                                     <Label htmlFor="description">Description</Label>
                                     <Textarea
                                         id="description"
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleChange}
+                                        value={data.description}
+                                        onChange={(e) => setData('description', e.target.value)}
                                         required
-                                        placeholder="Detailed text..."
+                                        placeholder="Detailed promotion rules..."
                                     />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="expiry_date">Expiry Date (Optional)</Label>
-                                    <Input id="expiry_date" name="expiry_date" type="date" value={formData.expiry_date} onChange={handleChange} />
+                                    <Input id="expiry_date" type="date" value={data.expiry_date} onChange={(e) => setData('expiry_date', e.target.value)} />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="image_url">Image URL (Optional)</Label>
                                     <Input
                                         id="image_url"
-                                        name="image_url"
-                                        value={formData.image_url}
-                                        onChange={handleChange}
+                                        value={data.image_url}
+                                        onChange={(e) => setData('image_url', e.target.value)}
                                         placeholder="https://..."
                                     />
                                 </div>
-                                <DialogFooter>
-                                    <Button type="submit" disabled={isSending}>
-                                        {isSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Create & Save
+                                <DialogFooter className="mt-6">
+                                    <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                                    <Button type="submit" disabled={processing}>
+                                        {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Create Campaign
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -270,75 +178,99 @@ export default function PromotionsPage() {
                     </Dialog>
                 </div>
 
-                <Card>
+                <Card className="shadow-sm border-t-4 border-t-primary/20">
                     <CardHeader>
-                        <CardTitle>All Promotions</CardTitle>
-                        <CardDescription>List of all active and inactive promotions.</CardDescription>
+                        <CardTitle>All Active & Historic</CardTitle>
+                        <CardDescription>A complete log of every promotional asset deployed to your users.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {isLoading ? (
-                            <div className="flex justify-center p-8">
-                                <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                        {promotions && promotions.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-12 text-center rounded-lg border border-dashed bg-muted/30">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                                    <Bell className="h-8 w-8 text-primary/70" />
+                                </div>
+                                <h3 className="mt-4 font-semibold text-lg">No Promotions Active</h3>
+                                <p className="mt-2 text-muted-foreground max-w-sm">You haven't created any announcements or promotions yet. Click the button above to get started.</p>
                             </div>
-                        ) : promotions.length === 0 ? (
-                            <div className="text-muted-foreground p-8 text-center">No promotions found. Create one to get started.</div>
                         ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Title</TableHead>
+                                        <TableHead className="w-[300px]">Campaign</TableHead>
                                         <TableHead>Type</TableHead>
-                                        <TableHead>Expires</TableHead>
+                                        <TableHead>Duration</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {promotions.map((promo) => (
+                                    {promotions && promotions.map((promo) => (
                                         <TableRow key={promo.id}>
-                                            <TableCell className="font-medium">
-                                                <div className="flex flex-col">
-                                                    <span>{promo.title}</span>
-                                                    <span className="text-muted-foreground max-w-[200px] truncate text-xs">{promo.description}</span>
+                                            <TableCell className="font-medium align-top">
+                                                <div className="flex items-start gap-3 pt-1">
+                                                    {promo.image_url && (
+                                                        <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border border-muted bg-muted/50">
+                                                            <img src={promo.image_url} alt="" className="h-full w-full object-cover" />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex flex-col">
+                                                        <span className="font-semibold text-base">{promo.title}</span>
+                                                        <span className="text-muted-foreground line-clamp-1 max-w-[280px] text-sm mt-0.5">{promo.description}</span>
+                                                    </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="align-middle">
                                                 <span
-                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                                    className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold capitalize tracking-wide ${
                                                         promo.type === 'alert'
                                                             ? 'bg-red-100 text-red-800'
                                                             : promo.type === 'promotion'
-                                                              ? 'bg-green-100 text-green-800'
-                                                              : 'bg-blue-100 text-blue-800'
+                                                              ? 'bg-emerald-100 text-emerald-800'
+                                                              : 'bg-indigo-100 text-indigo-800'
                                                     }`}
                                                 >
                                                     {promo.type}
                                                 </span>
                                             </TableCell>
-                                            <TableCell>
-                                                {promo.expiry_date ? new Date(promo.expiry_date).toLocaleDateString() : 'No expiry'}
+                                            <TableCell className="align-middle text-sm">
+                                                <div className="flex flex-col text-muted-foreground">
+                                                    <span>{new Date(promo.created_at).toLocaleDateString()}</span>
+                                                    <span>to {promo.expiry_date ? new Date(promo.expiry_date).toLocaleDateString() : 'Forever'}</span>
+                                                </div>
                                             </TableCell>
-                                            <TableCell>
-                                                <span
-                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${promo.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
-                                                >
-                                                    {promo.is_active ? 'Active' : 'Inactive'}
-                                                </span>
+                                            <TableCell className="align-middle">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`h-2.5 w-2.5 rounded-full ${promo.is_active ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-zinc-300'}`} />
+                                                    <span className="text-sm font-medium text-muted-foreground">
+                                                        {promo.is_active ? 'Active' : 'Archived'}
+                                                    </span>
+                                                </div>
                                             </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => handlePushNotification(promo)}
-                                                        title="Send Push Notification"
-                                                    >
-                                                        <Bell className="h-4 w-4" />
-                                                    </Button>
+                                            <TableCell className="text-right align-middle">
+                                                <div className="flex justify-end gap-1.5">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="text-red-500 hover:text-red-700"
+                                                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                        onClick={() => handlePushNotification(promo)}
+                                                        title="Broadcast Push Notification"
+                                                    >
+                                                        <Bell className="h-4 w-4" />
+                                                    </Button>
+                                                    <Link href={`/promotions/${promo.id}`}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-slate-600 hover:text-slate-900"
+                                                            title="View Expert Details"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                                         onClick={() => handleDelete(promo.id)}
                                                     >
                                                         <Trash2 className="h-4 w-4" />

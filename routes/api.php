@@ -318,12 +318,6 @@ Route::get('/promotions/{id}', [PromotionController::class, 'show'])->where('id'
 
 // Admin routes - protected
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('/admin/promotions', [PromotionController::class, 'adminIndex']);
-    Route::post('/admin/promotions', [PromotionController::class, 'store']);
-    Route::put('/admin/promotions/{id}', [PromotionController::class, 'update']);
-    Route::delete('/admin/promotions/{id}', [PromotionController::class, 'destroy']);
-    Route::patch('/admin/promotions/{id}/toggle', [PromotionController::class, 'toggleActive']);
-
     // System Configurations
     Route::get('/admin/config/rewards', [\App\Http\Controllers\AdminConfigController::class, 'getRewardsConfig']);
 });

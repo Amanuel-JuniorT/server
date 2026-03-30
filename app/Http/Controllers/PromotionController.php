@@ -35,7 +35,20 @@ class PromotionController extends Controller
     public function adminIndex()
     {
         $promotions = Promotion::orderBy('created_at', 'desc')->get();
-        return response()->json($promotions);
+        return \Inertia\Inertia::render('promotions', [
+            'promotions' => $promotions
+        ]);
+    }
+
+    /**
+     * Show detailed view for a single promotion (admin)
+     */
+    public function adminShow($id)
+    {
+        $promotion = Promotion::findOrFail($id);
+        return \Inertia\Inertia::render('promotion-detail', [
+            'promotion' => $promotion
+        ]);
     }
 
     /**
@@ -74,10 +87,7 @@ class PromotionController extends Controller
 
         AuditService::medium('Promotion Created', $promotion, "Created promotion/news: {$promotion->title}");
 
-        return response()->json([
-            'message' => 'Promotion created successfully',
-            'promotion' => $promotion
-        ], 201);
+        return redirect()->back()->with('success', 'Promotion created successfully');
     }
 
     /**
@@ -108,10 +118,7 @@ class PromotionController extends Controller
 
         AuditService::medium('Promotion Updated', $promotion, "Updated promotion/news: {$promotion->title}");
 
-        return response()->json([
-            'message' => 'Promotion updated successfully',
-            'promotion' => $promotion
-        ]);
+        return redirect()->back()->with('success', 'Promotion updated successfully');
     }
 
     /**
@@ -129,7 +136,7 @@ class PromotionController extends Controller
 
         AuditService::medium('Promotion Deleted', null, "Deleted promotion ID: {$id}");
 
-        return response()->json(['message' => 'Promotion deleted successfully']);
+        return redirect()->route('admin.promotions.index')->with('success', 'Promotion deleted successfully');
     }
 
     /**
@@ -148,10 +155,7 @@ class PromotionController extends Controller
 
         AuditService::log('Promotion Status Toggled', $promotion, 'low', "Toggled active status for promotion: {$promotion->title}. New status: " . ($promotion->is_active ? 'Active' : 'Inactive'));
 
-        return response()->json([
-            'message' => 'Promotion status updated',
-            'promotion' => $promotion
-        ]);
+        return redirect()->back()->with('success', 'Promotion status updated');
     }
 
     /**

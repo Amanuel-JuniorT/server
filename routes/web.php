@@ -93,10 +93,13 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
         return Inertia::render('notifications');
     })->name('notifications');
 
-    // Promotions Page
-    Route::get('promotions', function () {
-        return Inertia::render('promotions');
-    })->name('promotions');
+    // Promotions Management
+    Route::get('promotions', [\App\Http\Controllers\PromotionController::class, 'adminIndex'])->name('admin.promotions.index');
+    Route::get('promotions/{id}', [\App\Http\Controllers\PromotionController::class, 'adminShow'])->name('admin.promotions.show');
+    Route::post('admin/promotions', [\App\Http\Controllers\PromotionController::class, 'store'])->name('admin.promotions.store');
+    Route::put('admin/promotions/{id}', [\App\Http\Controllers\PromotionController::class, 'update'])->name('admin.promotions.update');
+    Route::delete('admin/promotions/{id}', [\App\Http\Controllers\PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
+    Route::patch('admin/promotions/{id}/toggle', [\App\Http\Controllers\PromotionController::class, 'toggleActive'])->name('admin.promotions.toggle');
 
     // Rewards Configuration Page
     Route::get('admin/config/rewards', function () {
