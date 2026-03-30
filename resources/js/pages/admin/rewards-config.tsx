@@ -45,9 +45,15 @@ export default function RewardsConfigPage() {
     }, [initialConfigs]);
 
     const handleToggle = (key: string, checked: boolean) => {
-        setConfigs((prev) =>
-            prev.map((item) => (item.key === key ? { ...item, value: checked ? 'true' : 'false' } : item))
-        );
+        setConfigs((prev) => {
+            const exists = prev.some((item) => item.key === key);
+            const valueStr = checked ? 'true' : 'false';
+            if (exists) {
+                return prev.map((item) => (item.key === key ? { ...item, value: valueStr } : item));
+            }
+            // Inject if missing from DB response
+            return [...prev, { id: 0, key, value: valueStr, type: 'boolean', group: 'rewards', description: '' }];
+        });
     };
 
     const handleInputChange = (key: string, value: string) => {
@@ -56,9 +62,13 @@ export default function RewardsConfigPage() {
             ? value.replace(/[^0-9.]/g, '') 
             : value;
             
-        setConfigs((prev) => 
-            prev.map((item) => (item.key === key ? { ...item, value: cleanValue } : item))
-        );
+        setConfigs((prev) => {
+            const exists = prev.some((item) => item.key === key);
+            if (exists) {
+                return prev.map((item) => (item.key === key ? { ...item, value: cleanValue } : item));
+            }
+            return [...prev, { id: 0, key, value: cleanValue, type: 'string', group: 'rewards', description: '' }];
+        });
     };
 
     const handleSave = async () => {
