@@ -74,7 +74,7 @@ export default function RewardsConfigPage() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const response = await axios.post('/api/admin/config/update', {
+            const response = await axios.post('/admin/config/update', {
                 settings: configs.map((c) => ({ key: c.key, value: String(c.value) })),
             });
 

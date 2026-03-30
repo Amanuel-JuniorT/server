@@ -326,7 +326,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // System Configurations
     Route::get('/admin/config/rewards', [\App\Http\Controllers\AdminConfigController::class, 'getRewardsConfig']);
-    Route::post('/admin/config/update', [\App\Http\Controllers\AdminConfigController::class, 'updateConfig']);
 });
 
 // Other Public Routes (outside group)

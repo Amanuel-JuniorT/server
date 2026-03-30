@@ -103,6 +103,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
         $configs = \App\Models\SystemConfiguration::where('group', 'rewards')->get();
         return Inertia::render('admin/rewards-config', ['configs' => $configs]);
     })->name('admin.config.rewards');
+    Route::post('admin/config/update', [\App\Http\Controllers\AdminConfigController::class, 'updateConfig']);
 
     // Company Ride Groups (NEW)
     Route::get('companies/{id}/ride-groups', function ($id) {
