@@ -306,13 +306,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 // Public routes - drivers and passengers can view active promotions
 Route::get('/promotions', [PromotionController::class, 'index']);
-Route::get('/promotions/{id}', [PromotionController::class, 'show']);
 
 // User Wallet & Promotion Application
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/promotions/wallet', [PromotionController::class, 'userWallet']);
     Route::post('/promotions/apply-code', [PromotionController::class, 'applyCode']);
 });
+
+// Important: Put {id} wildcard AFTER specific routes like /wallet
+Route::get('/promotions/{id}', [PromotionController::class, 'show'])->where('id', '[0-9]+');
 
 // Admin routes - protected
 Route::middleware(['auth:sanctum'])->group(function () {
