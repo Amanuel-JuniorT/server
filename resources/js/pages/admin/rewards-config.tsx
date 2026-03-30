@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Loader2, Save, Sparkles, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -70,6 +70,8 @@ export default function RewardsConfigPage() {
 
             if (response.data.success) {
                 toast.success('Settings saved successfully');
+                // Reload Inertia props to confirm persisted values from server
+                router.reload({ only: ['configs'] });
             } else {
                 throw new Error(response.data.message || 'Failed to save settings');
             }

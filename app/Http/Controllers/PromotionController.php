@@ -160,17 +160,30 @@ class PromotionController extends Controller
     public function userWallet(Request $request)
     {
         $user = $request->user();
-        
-        $wallet = UserPromotion::with('campaign')
-            ->where('user_id', $user->id)
-            ->whereIn('status', ['available', 'applied'])
-            ->orderBy('created_at', 'desc')
-            ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $wallet
-        ]);
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+        }
+
+        try {
+            $wallet = UserPromotion::with('campaign')
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['available', 'applied'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $wallet
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('userWallet error: ' . $e->getMessage());
+            // Return empty gracefully — table might not be migrated yet
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+        }
     }
 
     /**

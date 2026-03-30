@@ -29,20 +29,17 @@ class AppConfigService
 
     /**
      * Update a configuration value and clear cache.
+     * Creates the record if it doesn't exist yet.
      */
     public function set(string $key, $value)
     {
-        $config = SystemConfiguration::where('key', $key)->first();
-        
-        if ($config) {
-            $config->value = $value;
-            $config->save();
-            
-            Cache::forget($this->cachePrefix . $key);
-            return true;
-        }
+        $config = SystemConfiguration::updateOrCreate(
+            ['key' => $key],
+            ['value' => $value]
+        );
 
-        return false;
+        Cache::forget($this->cachePrefix . $key);
+        return true;
     }
 
     /**
