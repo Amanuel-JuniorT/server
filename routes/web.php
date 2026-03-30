@@ -93,13 +93,20 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
         return Inertia::render('notifications');
     })->name('notifications');
 
-    // Promotions Management
+    // Promotions Management (News & Banners)
     Route::get('promotions', [\App\Http\Controllers\PromotionController::class, 'adminIndex'])->name('admin.promotions.index');
     Route::get('promotions/{id}', [\App\Http\Controllers\PromotionController::class, 'adminShow'])->name('admin.promotions.show');
     Route::post('admin/promotions', [\App\Http\Controllers\PromotionController::class, 'store'])->name('admin.promotions.store');
     Route::put('admin/promotions/{id}', [\App\Http\Controllers\PromotionController::class, 'update'])->name('admin.promotions.update');
     Route::delete('admin/promotions/{id}', [\App\Http\Controllers\PromotionController::class, 'destroy'])->name('admin.promotions.destroy');
     Route::patch('admin/promotions/{id}/toggle', [\App\Http\Controllers\PromotionController::class, 'toggleActive'])->name('admin.promotions.toggle');
+
+    // Promo Codes Management (Financial Engine)
+    Route::get('promo-codes', [\App\Http\Controllers\PromoCodeController::class, 'index'])->name('admin.promo-codes.index');
+    Route::post('admin/promo-codes', [\App\Http\Controllers\PromoCodeController::class, 'store'])->name('admin.promo-codes.store');
+    Route::put('admin/promo-codes/{id}', [\App\Http\Controllers\PromoCodeController::class, 'update'])->name('admin.promo-codes.update');
+    Route::delete('admin/promo-codes/{id}', [\App\Http\Controllers\PromoCodeController::class, 'destroy'])->name('admin.promo-codes.destroy');
+    Route::patch('admin/promo-codes/{id}/toggle', [\App\Http\Controllers\PromoCodeController::class, 'toggleActive'])->name('admin.promo-codes.toggle');
 
     // Rewards Configuration Page
     Route::get('admin/config/rewards', function () {

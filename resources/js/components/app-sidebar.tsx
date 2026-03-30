@@ -22,6 +22,7 @@ import {
     Car,
     CreditCard,
     FileText,
+    Gift,
     LayoutGrid,
     Map,
     Send,
@@ -69,6 +70,7 @@ const superAdminNavItems = [
     {
         group: 'System',
         items: [
+            { title: 'Promo Codes', href: '/promo-codes', icon: Gift },
             { title: 'Promotions', href: '/promotions', icon: Ticket },
             { title: 'Rewards Config', href: '/admin/config/rewards', icon: Sparkles },
             { title: 'Notifications', href: '/notifications', icon: Bell },
