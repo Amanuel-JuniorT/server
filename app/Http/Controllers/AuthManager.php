@@ -242,8 +242,11 @@ class AuthManager extends Controller
                     ? (int) \App\Models\SystemConfiguration::where('key', 'streak_target_rides')->value('value') ?: 5 
                     : 0;
                 
+                $streakReward = (int) \App\Models\SystemConfiguration::where('key', 'streak_reward_amount')->value('value') ?: 50;
+                
                 $user->streak_progress = (int) ($user->streak_progress ?? 0);
                 $user->streak_target = $streakTarget;
+                $user->streak_reward_amount = $streakReward;
             }
 
             return response()->json([

@@ -7,10 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Loader2, Save, Sparkles, Users, Car } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import axios from 'axios';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 
 interface ConfigItem {
     id: number;
@@ -99,6 +98,34 @@ export default function RewardsConfigPage() {
         return item ? item.value : '';
     };
 
+    // Configuration Validation
+    const getValidationStatus = () => {
+        const issues: string[] = [];
+        
+        if (getConfigValue('streak_enabled') === 'true') {
+            if (!getConfigValue('streak_target_rides') || Number(getConfigValue('streak_target_rides')) <= 0) {
+                issues.push('Passenger Streak: Target rides must be greater than 0.');
+            }
+            if (!getConfigValue('streak_reward_amount') || Number(getConfigValue('streak_reward_amount')) <= 0) {
+                issues.push('Passenger Streak: Reward amount must be greater than 0.');
+            }
+        }
+
+        if (getConfigValue('referral_enabled') === 'true') {
+            if (!getConfigValue('referral_inviter_reward_amount') || Number(getConfigValue('referral_inviter_reward_amount')) <= 0) {
+                issues.push('Referral: Inviter reward is missing.');
+            }
+            if (!getConfigValue('referral_invitee_reward_amount') || Number(getConfigValue('referral_invitee_reward_amount')) <= 0) {
+                issues.push('Referral: Invitee reward is missing.');
+            }
+        }
+
+        return issues;
+    };
+
+    const validationIssues = getValidationStatus();
+
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rewards Configuration" />
@@ -108,11 +135,34 @@ export default function RewardsConfigPage() {
                         <h1 className="text-2xl font-bold tracking-tight">Advanced Rewards Configuration</h1>
                         <p className="text-muted-foreground">Manage global toggles for Referrals, Streaks, and automated bonuses.</p>
                     </div>
-                    <Button onClick={handleSave} disabled={isSaving || isLoading}>
+                    <Button onClick={handleSave} disabled={isSaving || isLoading} size="lg" className="shadow-lg">
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                         Save Changes
                     </Button>
                 </div>
+
+                {/* Configuration Guard Bar */}
+                {validationIssues.length > 0 ? (
+                    <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+                        <AlertCircle className="h-5 w-5" />
+                        <AlertTitle className="font-bold">Configuration Required</AlertTitle>
+                        <AlertDescription>
+                            <ul className="list-disc list-inside space-y-1 mt-2 text-sm">
+                                {validationIssues.map((issue, idx) => (
+                                    <li key={idx}>{issue}</li>
+                                ))}
+                            </ul>
+                        </AlertDescription>
+                    </Alert>
+                ) : (
+                    <Alert className="bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 animate-in fade-in duration-500">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                        <AlertTitle className="text-emerald-800 dark:text-emerald-400 font-bold">System Optimized</AlertTitle>
+                        <AlertDescription className="text-emerald-700/80 dark:text-emerald-500/80">
+                            All enabled reward features have valid configurations. Your hub is ready to go!
+                        </AlertDescription>
+                    </Alert>
+                )}
 
                 {isLoading ? (
                     <div className="flex justify-center p-12">
