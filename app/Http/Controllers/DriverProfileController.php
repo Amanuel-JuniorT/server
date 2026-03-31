@@ -463,7 +463,8 @@ class DriverProfileController extends Controller
             $configService = app(\App\Services\AppConfigService::class);
             $streakEnabled = (bool) $configService->get('driver_streak_enabled', false);
             $streakProgress = (int) ($user->streak_progress ?? 0);
-            $streakTarget = $streakEnabled ? (int) $configService->get('driver_streak_target', 10) : 0;
+            $streakTarget = $streakEnabled ? (int) $configService->get('driver_streak_target_rides', 10) : 0;
+            $streakReward = $streakEnabled ? (float) $configService->get('driver_streak_reward_amount', 0) : 0;
 
             return response()->json([
                 'success' => true,
@@ -478,6 +479,7 @@ class DriverProfileController extends Controller
                     'no_show_count' => (int) $driver->no_show_count,
                     'streak_progress' => $streakProgress,
                     'streak_target' => $streakTarget,
+                    'streak_reward_amount' => $streakReward,
                 ]
             ]);
         } catch (\Exception $e) {

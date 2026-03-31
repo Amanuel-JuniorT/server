@@ -20,13 +20,13 @@ return new class extends Migration
             // Passenger Streaks
             ['key' => 'streak_target_rides', 'value' => '5', 'type' => 'integer', 'group' => 'rewards', 'description' => 'Rides required to hit a streak'],
             ['key' => 'streak_reward_amount', 'value' => '50', 'type' => 'integer', 'group' => 'rewards', 'description' => 'ETB rewarded for completing a streak'],
-            ['key' => 'streak_reward_type', 'value' => 'flat', 'type' => 'string', 'group' => 'rewards', 'description' => 'flat or percent'],
+            ['key' => 'streak_reward_type', 'value' => 'fixed', 'type' => 'string', 'group' => 'rewards', 'description' => 'fixed or percent'],
             
             // Referrals
             ['key' => 'referral_inviter_reward_amount', 'value' => '50', 'type' => 'integer', 'group' => 'rewards', 'description' => 'Reward for the person sharing the code'],
-            ['key' => 'referral_inviter_reward_type', 'value' => 'flat', 'type' => 'string', 'group' => 'rewards', 'description' => 'flat or percent'],
+            ['key' => 'referral_inviter_reward_type', 'value' => 'fixed', 'type' => 'string', 'group' => 'rewards', 'description' => 'fixed or percent'],
             ['key' => 'referral_invitee_reward_amount', 'value' => '30', 'type' => 'integer', 'group' => 'rewards', 'description' => 'Reward for the person using a code'],
-            ['key' => 'referral_invitee_reward_type', 'value' => 'percent', 'type' => 'string', 'group' => 'rewards', 'description' => 'flat or percent'],
+            ['key' => 'referral_invitee_reward_type', 'value' => 'percent', 'type' => 'string', 'group' => 'rewards', 'description' => 'fixed or percent'],
         ];
 
         foreach ($defaults as $config) {

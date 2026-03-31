@@ -200,14 +200,14 @@ export default function RewardsConfigPage() {
                                         <div className="space-y-2">
                                             <Label>Discount Type</Label>
                                             <Select 
-                                                value={getConfigValue('referral_inviter_reward_type') || 'flat'} 
+                                                value={getConfigValue('referral_inviter_reward_type') || 'fixed'} 
                                                 onValueChange={(val) => handleInputChange('referral_inviter_reward_type', val)}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select type" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="flat">Flat ETB Amount</SelectItem>
+                                                    <SelectItem value="fixed">Fixed ETB Amount</SelectItem>
                                                     <SelectItem value="percent">Percentage Off</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -240,7 +240,7 @@ export default function RewardsConfigPage() {
                                                     <SelectValue placeholder="Select type" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="flat">Flat ETB Amount</SelectItem>
+                                                    <SelectItem value="fixed">Fixed ETB Amount</SelectItem>
                                                     <SelectItem value="percent">Percentage Off</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -305,14 +305,14 @@ export default function RewardsConfigPage() {
                                             <div className="space-y-2">
                                                 <Label>Discount Type</Label>
                                                 <Select 
-                                                    value={getConfigValue('streak_reward_type') || 'flat'} 
+                                                    value={getConfigValue('streak_reward_type') || 'fixed'} 
                                                     onValueChange={(val) => handleInputChange('streak_reward_type', val)}
                                                 >
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="flat">Flat ETB Amount</SelectItem>
+                                                        <SelectItem value="fixed">Fixed ETB Amount</SelectItem>
                                                         <SelectItem value="percent">Percentage Off</SelectItem>
                                                     </SelectContent>
                                                 </Select>

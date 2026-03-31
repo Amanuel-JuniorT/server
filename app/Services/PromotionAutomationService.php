@@ -86,7 +86,7 @@ class PromotionAutomationService
                 ->exists();
 
             if (!$alreadyAwarded) {
-                $discountType = $this->config->get('streak_reward_type', 'flat');
+                $discountType = $this->config->get('streak_reward_type', 'fixed');
                 $discountValue = (float) $this->config->get('streak_reward_amount', 50);
 
                 $this->issueReward($user, 'streak_reward', "🏆 You completed {$target} rides! Your reward is ready.", $discountType, $discountValue);
@@ -102,7 +102,7 @@ class PromotionAutomationService
      */
     protected function checkDriverStreak(User $driverUser)
     {
-        $target = (int) $this->config->get('driver_streak_target', 10);
+        $target = (int) $this->config->get('driver_streak_target_rides', 10);
 
         // Atomically increment the counter
         $driverUser->increment('streak_progress');
@@ -115,20 +115,37 @@ class PromotionAutomationService
             $bonusAmount = (float) $this->config->get('driver_streak_reward_amount', 200);
 
             // Directly deposit to wallet (Real Earnings)
-            $driverUser->increment('wallet_balance', $bonusAmount);
-            
-            // Notify driver instantly
-            $this->notificationService->notifyUser(
-                $driverUser->id,
-                "🎉 Bonus Cash Earned!",
-                "You completed {$target} rides in a row! {$bonusAmount} ETB was just deposited directly into your wallet.",
-                ['type' => 'reward_earned', 'bonus_amount' => $bonusAmount]
-            );
+            try {
+                DB::transaction(function () use ($driverUser, $bonusAmount, $target) {
+                    $wallet = \App\Models\Wallet::firstOrCreate(['user_id' => $driverUser->id]);
+                    $wallet->increment('balance', $bonusAmount);
 
-            Log::info("Driver Streak bonus issued: {$bonusAmount} ETB to Driver User ID: {$driverUser->id}");
+                    \App\Models\Transaction::create([
+                        'wallet_id' => $wallet->id,
+                        'type' => 'deposit',
+                        'amount' => $bonusAmount,
+                        'note' => "Streak Bonus: Completed {$target} consecutive rides!",
+                        'status' => 'approved'
+                    ]);
 
-            // Reset streak to allow them to earn it again
-            $driverUser->update(['streak_progress' => 0]);
+                    // Reset streak to allow them to earn it again
+                    $driverUser->update(['streak_progress' => 0]);
+                });
+
+                // Notify driver instantly
+                $this->notificationService->notifyUser(
+                    $driverUser->id,
+                    "🎉 Bonus Cash Earned!",
+                    "You completed {$target} rides in a row! {$bonusAmount} ETB was just deposited directly into your wallet.",
+                    ['type' => 'reward_earned', 'bonus_amount' => $bonusAmount],
+                    null,
+                    'Driver'
+                );
+
+                Log::info("Driver Streak bonus issued: {$bonusAmount} ETB to Driver User ID: {$driverUser->id}");
+            } catch (\Exception $e) {
+                Log::error("Failed to issue driver streak bonus: " . $e->getMessage());
+            }
         }
     }
 
@@ -147,7 +164,7 @@ class PromotionAutomationService
                 $this->issueReward($user, 'referral_invitee', "Welcome Gift! Thanks for joining.", $inviteeType, $inviteeValue);
 
                 // Award Inviter (The parent referrer)
-                $inviterType = $this->config->get('referral_inviter_reward_type', 'flat');
+                $inviterType = $this->config->get('referral_inviter_reward_type', 'fixed');
                 $inviterValue = (float) $this->config->get('referral_inviter_reward_amount', 50);
                 $this->issueReward($referrer, 'referral_inviter', "Referral Reward! Your friend just took their first ride.", $inviterType, $inviterValue);
             }
@@ -158,7 +175,7 @@ class PromotionAutomationService
      * Issue a voucher from a specialized campaign.
      * Uses updateOrCreate to ensure dynamic config changes apply to new vouchers immediately.
      */
-    protected function issueReward(User $user, string $type, string $message, string $discountType = 'flat', float $discountValue = 50.0)
+    protected function issueReward(User $user, string $type, string $message, string $discountType = 'fixed', float $discountValue = 50.0)
     {
         // Update or create a hidden system campaign for this reward
         $campaign = PromotionCampaign::updateOrCreate(

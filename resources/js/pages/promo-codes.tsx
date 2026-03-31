@@ -18,7 +18,7 @@ interface PromotionCampaign {
     name: string;
     description: string | null;
     code: string;
-    discount_type: 'percentage' | 'flat';
+    discount_type: 'percent' | 'fixed' | 'flat_fare';
     discount_value: number;
     max_discount_amount: number | null;
     min_trip_amount: number | null;
@@ -43,7 +43,7 @@ export default function PromoCodesPage() {
         name: '',
         description: '',
         code: '',
-        discount_type: 'percentage' as 'percentage' | 'flat',
+        discount_type: 'percent' as 'percent' | 'fixed' | 'flat_fare',
         discount_value: '',
         max_discount_amount: '',
         min_trip_amount: '',
@@ -168,15 +168,14 @@ export default function PromoCodesPage() {
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="percentage">Percentage (%)</SelectItem>
-                                                    <SelectItem value="flat">Flat Amount (ETB)</SelectItem>
+                                                    <SelectItem value="percent">Percentage (%)</SelectItem>
+                                                    <SelectItem value="fixed">Fixed Amount (ETB)</SelectItem>
+                                                    <SelectItem value="flat_fare">Flat Fare (ETB)</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="discount_value" className="font-bold">
-                                                Value ({data.discount_type === 'percentage' ? '%' : 'ETB'}) <span className="text-red-500">*</span>
-                                            </Label>
+                                                Value ({data.discount_type === 'percent' ? '%' : 'ETB'}) <span className="text-red-500">*</span>
                                             <Input
                                                 id="discount_value"
                                                 type="number"
@@ -187,7 +186,7 @@ export default function PromoCodesPage() {
                                             />
                                             {errors.discount_value && <p className="text-xs text-red-500">{errors.discount_value}</p>}
                                         </div>
-                                        {data.discount_type === 'percentage' && (
+                                        {data.discount_type === 'percent' && (
                                             <div className="space-y-2 col-span-2">
                                                 <Label htmlFor="max_discount_amount">Maximum Discount Cap (ETB)</Label>
                                                 <Input
@@ -303,11 +302,13 @@ export default function PromoCodesPage() {
                                             <TableCell className="align-middle">
                                                 <div className="flex flex-col gap-1 text-sm">
                                                     <span className="font-bold text-emerald-600">
-                                                        {campaign.discount_type === 'percentage' 
+                                                        {campaign.discount_type === 'percent' 
                                                             ? `${campaign.discount_value}% OFF`
-                                                            : `${campaign.discount_value} ETB OFF`}
+                                                            : campaign.discount_type === 'fixed'
+                                                                ? `${campaign.discount_value} ETB OFF`
+                                                                : `Exact Fare: ${campaign.discount_value} ETB`}
                                                     </span>
-                                                    {campaign.discount_type === 'percentage' && campaign.max_discount_amount && (
+                                                    {campaign.discount_type === 'percent' && campaign.max_discount_amount && (
                                                         <span className="text-xs text-muted-foreground">Max limit: {campaign.max_discount_amount} ETB</span>
                                                     )}
                                                     {campaign.usage_limit_per_user && (
