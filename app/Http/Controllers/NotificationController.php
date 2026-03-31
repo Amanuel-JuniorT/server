@@ -429,19 +429,51 @@ class NotificationController extends Controller
     }
 
     /**
-     * Get notification history for the authenticated user.
+     * Get notification history for the authenticated user (merged with global promotions).
      */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         
+        // 1. Get personal notifications
         $notifications = UserNotification::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->get()
+            ->map(function($n) {
+                return [
+                    'id' => $n->id,
+                    'title' => $n->title,
+                    'body' => $n->body,
+                    'type' => 'alert',
+                    'read_at' => $n->read_at,
+                    'created_at' => $n->created_at
+                ];
+            });
+
+        // 2. Get global active promotions (announced news)
+        $promotions = \App\Models\Promotion::active()
+            ->where('type', 'promotion')
+            ->get()
+            ->map(function($p) {
+                return [
+                    'id' => $p->id + 100000, // Offset to avoid ID collision
+                    'title' => $p->title,
+                    'body' => $p->description,
+                    'type' => 'news',
+                    'read_at' => now(), // Global news is "read" by default or handled differently
+                    'created_at' => $p->created_at
+                ];
+            });
+
+        // Merge and sort
+        $merged = $notifications->concat($promotions)
+            ->sortByDesc('created_at')
+            ->values();
 
         return response()->json([
             'success' => true,
-            'data' => $notifications
+            'data' => [
+                'data' => $merged // Maintain the wrapper structure the app expects
+            ]
         ]);
     }
 
