@@ -40,7 +40,7 @@ class AdminConfigController extends Controller
         ]);
 
         foreach ($request->settings as $setting) {
-            $this->configService->set($setting['key'], $setting['value']);
+            $this->configService->set($setting['key'], $setting['value'], 'rewards');
         }
 
         return response()->json([

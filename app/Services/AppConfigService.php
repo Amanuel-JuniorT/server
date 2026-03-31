@@ -31,11 +31,16 @@ class AppConfigService
      * Update a configuration value and clear cache.
      * Creates the record if it doesn't exist yet.
      */
-    public function set(string $key, $value)
+    public function set(string $key, $value, ?string $group = null)
     {
+        $updateData = ['value' => $value];
+        if ($group) {
+            $updateData['group'] = $group;
+        }
+
         $config = SystemConfiguration::updateOrCreate(
             ['key' => $key],
-            ['value' => $value]
+            $updateData
         );
 
         Cache::forget($this->cachePrefix . $key);
