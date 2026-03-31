@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Loader2, Save, Sparkles, Users } from 'lucide-react';
+import { Loader2, Save, Sparkles, Users, Car } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -210,77 +210,137 @@ export default function RewardsConfigPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Streak Settings */}
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-amber-500" />
-                                    <CardTitle>Ride Streaks</CardTitle>
-                                </div>
-                                <CardDescription>Reward loyal users for consistently riding with ETHIOCAB.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="flex items-center justify-between space-x-2 pb-4 border-b">
-                                    <Label htmlFor="streak_enabled" className="flex flex-col gap-1">
-                                        <span className="font-semibold text-base">Enable Milestone Streaks</span>
-                                        <span className="text-muted-foreground font-normal text-xs">Automatically deposit a reward when users hit their target.</span>
-                                    </Label>
-                                    <Switch
-                                        id="streak_enabled"
-                                        checked={getConfigValue('streak_enabled') === 'true'}
-                                        onCheckedChange={(checked) => handleToggle('streak_enabled', checked)}
-                                    />
-                                </div>
-                                
-                                <div className="space-y-3">
-                                    <h4 className="font-medium text-sm">Milestone Definition</h4>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="streak_target_rides">Target Rides (per 7 Days)</Label>
-                                        <Input
-                                            id="streak_target_rides"
-                                            type="text"
-                                            inputMode="numeric"
-                                            value={getConfigValue('streak_target_rides')}
-                                            onChange={(e) => handleInputChange('streak_target_rides', e.target.value)}
-                                            placeholder="e.g., 5"
-                                        />
-                                        <p className="text-muted-foreground text-xs">Number of completed rides required within a week to hit the streak.</p>
+                        <div className="space-y-6 flex flex-col h-full">
+                            {/* Passenger Streak Settings */}
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center gap-2">
+                                        <Sparkles className="h-5 w-5 text-amber-500" />
+                                        <CardTitle>Passenger Streaks</CardTitle>
                                     </div>
-                                </div>
-
-                                <div className="space-y-3 pt-4 border-t">
-                                    <h4 className="font-medium text-sm">Payout Reward</h4>
-                                    <p className="text-muted-foreground text-xs">What voucher is deposited into their wallet upon completion?</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label>Discount Type</Label>
-                                            <Select 
-                                                value={getConfigValue('streak_reward_type') || 'flat'} 
-                                                onValueChange={(val) => handleInputChange('streak_reward_type', val)}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select type" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="flat">Flat ETB Amount</SelectItem>
-                                                    <SelectItem value="percent">Percentage Off</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Amount Value</Label>
+                                    <CardDescription>Reward loyal users for consistently riding with ETHIOCAB.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="flex items-center justify-between space-x-2 pb-4 border-b">
+                                        <Label htmlFor="streak_enabled" className="flex flex-col gap-1">
+                                            <span className="font-semibold text-base">Enable Milestone Streaks</span>
+                                            <span className="text-muted-foreground font-normal text-xs">Automatically deposit a reward when users hit their target.</span>
+                                        </Label>
+                                        <Switch
+                                            id="streak_enabled"
+                                            checked={getConfigValue('streak_enabled') === 'true'}
+                                            onCheckedChange={(checked) => handleToggle('streak_enabled', checked)}
+                                        />
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        <h4 className="font-medium text-sm">Milestone Definition</h4>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="streak_target_rides">Target Rides (per 7 Days)</Label>
                                             <Input
+                                                id="streak_target_rides"
                                                 type="text"
                                                 inputMode="numeric"
-                                                value={getConfigValue('streak_reward_amount')}
-                                                onChange={(e) => handleInputChange('streak_reward_amount', e.target.value)}
-                                                placeholder="e.g. 50"
+                                                value={getConfigValue('streak_target_rides')}
+                                                onChange={(e) => handleInputChange('streak_target_rides', e.target.value)}
+                                                placeholder="e.g., 5"
                                             />
+                                            <p className="text-muted-foreground text-xs">Number of completed rides required within a week to hit the streak.</p>
                                         </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+
+                                    <div className="space-y-3 pt-4 border-t">
+                                        <h4 className="font-medium text-sm">Payout Reward</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label>Discount Type</Label>
+                                                <Select 
+                                                    value={getConfigValue('streak_reward_type') || 'flat'} 
+                                                    onValueChange={(val) => handleInputChange('streak_reward_type', val)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="flat">Flat ETB Amount</SelectItem>
+                                                        <SelectItem value="percent">Percentage Off</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Amount Value</Label>
+                                                <Input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={getConfigValue('streak_reward_amount')}
+                                                    onChange={(e) => handleInputChange('streak_reward_amount', e.target.value)}
+                                                    placeholder="e.g. 50"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Driver Streak Settings */}
+                            <Card className="border-emerald-500/20 shadow-sm">
+                                <CardHeader className="bg-emerald-50/50 pb-4 dark:bg-emerald-950/20">
+                                    <div className="flex items-center gap-2">
+                                        <Car className="h-5 w-5 text-emerald-500" />
+                                        <CardTitle>Driver Execution Streaks</CardTitle>
+                                    </div>
+                                    <CardDescription>Massively increase supply by incentivizing consecutive driving.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6 pt-6">
+                                    <div className="flex items-center justify-between space-x-2 pb-4 border-b">
+                                        <Label htmlFor="driver_streak_enabled" className="flex flex-col gap-1">
+                                            <span className="font-semibold text-base text-emerald-700 dark:text-emerald-400">Enable Driver Streaks</span>
+                                            <span className="text-muted-foreground font-normal text-xs">Automatically deposit direct ETB cash into their wallet.</span>
+                                        </Label>
+                                        <Switch
+                                            id="driver_streak_enabled"
+                                            checked={getConfigValue('driver_streak_enabled') === 'true'}
+                                            onCheckedChange={(checked) => handleToggle('driver_streak_enabled', checked)}
+                                        />
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        <h4 className="font-medium text-sm">Milestone Definition</h4>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="driver_streak_target_rides">Consecutive Rides Target</Label>
+                                            <Input
+                                                id="driver_streak_target_rides"
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={getConfigValue('driver_streak_target_rides')}
+                                                onChange={(e) => handleInputChange('driver_streak_target_rides', e.target.value)}
+                                                placeholder="e.g., 10"
+                                            />
+                                            <p className="text-muted-foreground text-xs">Number of consecutive ride completions required for the bonus.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3 pt-4 border-t">
+                                        <h4 className="font-medium text-sm">Real Cash Payout</h4>
+                                        <div className="grid gap-2">
+                                            <Label>Flat ETB Amount Deposit</Label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2.5 text-muted-foreground font-semibold">Br</span>
+                                                <Input
+                                                    className="pl-8 bg-emerald-50/30 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={getConfigValue('driver_streak_reward_amount')}
+                                                    onChange={(e) => handleInputChange('driver_streak_reward_amount', e.target.value)}
+                                                    placeholder="e.g. 500"
+                                                />
+                                            </div>
+                                            <p className="text-muted-foreground text-xs">This is instantly credited to the driver's withdrawable wallet balance.</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 )}
             </div>

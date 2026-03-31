@@ -30,12 +30,17 @@ class PromotionAutomationService
     {
         $this->updateUserActivity($ride);
         
-        // 1. Check for Streak Reward
+        // 1. Check for Passenger Streak Reward
         if ($this->config->get('streak_enabled', false)) {
-            $this->checkStreakReward($ride->passenger);
+            $this->checkPassengerStreak($ride->passenger);
         }
 
-        // 2. Check for Referral Reward (if first ride)
+        // 2. Check for Driver Streak Reward
+        if ($this->config->get('driver_streak_enabled', false) && $ride->driver && $ride->driver->user) {
+            $this->checkDriverStreak($ride->driver->user);
+        }
+
+        // 3. Check for Referral Reward (if first ride)
         if ($this->config->get('referral_enabled', false)) {
             $rideCount = Ride::where('passenger_id', $ride->passenger_id)
                 ->where('status', 'completed')
@@ -59,10 +64,10 @@ class PromotionAutomationService
     }
 
     /**
-     * Check if user reached a streak milestone.
-     * Uses the user's streak_progress counter (reset after reward).
+     * Check if PASSENGER reached a streak milestone.
+     * Uses the passenger's streak_progress counter.
      */
-    protected function checkStreakReward(User $user)
+    protected function checkPassengerStreak(User $user)
     {
         $target = (int) $this->config->get('streak_target_rides', 5);
 
@@ -88,6 +93,42 @@ class PromotionAutomationService
                 // Reset so the next cycle starts fresh
                 $user->update(['streak_progress' => 0]);
             }
+        }
+    }
+
+    /**
+     * Check if DRIVER reached a streak milestone.
+     * Uses the driver's streak_progress counter and instantly deposits cash.
+     */
+    protected function checkDriverStreak(User $driverUser)
+    {
+        $target = (int) $this->config->get('driver_streak_target_rides', 10);
+
+        // Atomically increment the counter
+        $driverUser->increment('streak_progress');
+        $driverUser->refresh();
+        $currentProgress = (int) $driverUser->streak_progress;
+
+        Log::info("Driver Streak progress for Driver User {$driverUser->id}: {$currentProgress}/{$target}");
+
+        if ($currentProgress >= $target) {
+            $bonusAmount = (float) $this->config->get('driver_streak_reward_amount', 200);
+
+            // Directly deposit to wallet (Real Earnings)
+            $driverUser->increment('wallet_balance', $bonusAmount);
+            
+            // Notify driver instantly
+            $this->notificationService->notifyUser(
+                $driverUser->id,
+                "🎉 Bonus Cash Earned!",
+                "You completed {$target} rides in a row! {$bonusAmount} ETB was just deposited directly into your wallet.",
+                ['type' => 'wallet_credit', 'amount' => $bonusAmount]
+            );
+
+            Log::info("Driver Streak bonus issued: {$bonusAmount} ETB to Driver User ID: {$driverUser->id}");
+
+            // Reset streak to allow them to earn it again
+            $driverUser->update(['streak_progress' => 0]);
         }
     }
 
