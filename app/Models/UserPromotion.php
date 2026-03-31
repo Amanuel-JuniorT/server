@@ -15,11 +15,13 @@ class UserPromotion extends Model
         'status',
         'rides_remaining',
         'used_at',
+        'expires_at',
         'ride_id',
     ];
 
     protected $casts = [
         'used_at' => 'datetime',
+        'expires_at' => 'datetime',
         'rides_remaining' => 'integer',
     ];
 

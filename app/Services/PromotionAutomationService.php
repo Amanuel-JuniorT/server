@@ -102,7 +102,7 @@ class PromotionAutomationService
      */
     protected function checkDriverStreak(User $driverUser)
     {
-        $target = (int) $this->config->get('driver_streak_target_rides', 10);
+        $target = (int) $this->config->get('driver_streak_target', 10);
 
         // Atomically increment the counter
         $driverUser->increment('streak_progress');
@@ -122,7 +122,7 @@ class PromotionAutomationService
                 $driverUser->id,
                 "🎉 Bonus Cash Earned!",
                 "You completed {$target} rides in a row! {$bonusAmount} ETB was just deposited directly into your wallet.",
-                ['type' => 'wallet_credit', 'amount' => $bonusAmount]
+                ['type' => 'reward_earned', 'bonus_amount' => $bonusAmount]
             );
 
             Log::info("Driver Streak bonus issued: {$bonusAmount} ETB to Driver User ID: {$driverUser->id}");
@@ -178,6 +178,7 @@ class PromotionAutomationService
             'promotion_campaign_id' => $campaign->id,
             'status' => 'available',
             'rides_remaining' => 1,
+            'expires_at' => now()->addDays(7),
             'metadata' => ['type' => $type]
         ]);
 
@@ -190,5 +191,15 @@ class PromotionAutomationService
         );
         
         Log::info("Reward issued: {$type} to User ID: {$user->id}");
+    }
+
+    /**
+     * RESET all user streak progress.
+     * This should be called by a weekly cron job.
+     */
+    public function resetWeeklyStreaks()
+    {
+        User::query()->update(['streak_progress' => 0]);
+        Log::info("All user steak progress has been reset for the new week.");
     }
 }

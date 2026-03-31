@@ -26,3 +26,6 @@ Schedule::command('rides:expire')->everyMinute();
 Schedule::call(function () {
     (new \App\Services\TransactionVerificationService())->auditAllWallets();
 })->dailyAt('03:00')->name('audit-financial-integrity');
+
+// Schedule weekly streak reset
+Schedule::command('app:reset-weekly-streaks')->weeklyOn(1, '00:00');

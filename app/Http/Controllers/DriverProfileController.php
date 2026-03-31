@@ -459,6 +459,12 @@ class DriverProfileController extends Controller
             });
             $onlineHours = $thisWeekRides->count() * 2; // Estimate 2 hours per trip
 
+            // Get streak info
+            $configService = app(\App\Services\AppConfigService::class);
+            $streakEnabled = (bool) $configService->get('driver_streak_enabled', false);
+            $streakProgress = (int) ($user->streak_progress ?? 0);
+            $streakTarget = $streakEnabled ? (int) $configService->get('driver_streak_target', 10) : 0;
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -470,6 +476,8 @@ class DriverProfileController extends Controller
                     'online_hours' => $onlineHours,
                     'reliability_score' => (float) $driver->reliability_score,
                     'no_show_count' => (int) $driver->no_show_count,
+                    'streak_progress' => $streakProgress,
+                    'streak_target' => $streakTarget,
                 ]
             ]);
         } catch (\Exception $e) {
