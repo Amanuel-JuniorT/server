@@ -235,7 +235,9 @@ class AuthManager extends Controller
                 $user->user_points = 0; // Placeholder
 
                 // Live streak/referral data for Rewards screen
-                $streaksEnabled = (bool) \App\Models\SystemConfiguration::where('key', 'streak_enabled')->value('value');
+                $streakEnabledVal = \App\Models\SystemConfiguration::where('key', 'streak_enabled')->value('value');
+                $streaksEnabled = $streakEnabledVal && !in_array(strtolower($streakEnabledVal), ['false', '0', 'off', 'no']);
+                
                 $streakTarget = $streaksEnabled 
                     ? (int) \App\Models\SystemConfiguration::where('key', 'streak_target_rides')->value('value') ?: 5 
                     : 0;
