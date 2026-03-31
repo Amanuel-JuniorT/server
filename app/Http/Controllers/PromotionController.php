@@ -170,11 +170,35 @@ class PromotionController extends Controller
         }
 
         try {
-            $wallet = UserPromotion::with('campaign')
+            // 1. Get personalized vouchers
+            $userPromotions = UserPromotion::with('campaign')
                 ->where('user_id', $user->id)
                 ->whereIn('status', ['available', 'applied'])
                 ->orderBy('created_at', 'desc')
                 ->get();
+
+            // 2. Get global active promotions (news/announcements type)
+            $globalPromotions = Promotion::active()
+                ->where('type', 'promotion')
+                ->get()
+                ->map(function ($promo) {
+                    // Wrap in a structure compatible with the app's UserPromotion model
+                    return [
+                        'id' => $promo->id + 100000, // Offset ID to avoid collisions
+                        'status' => 'available',
+                        'rides_remaining' => 1,
+                        'expires_at' => $promo->expiry_date ? $promo->expiry_date->toIso8601String() : null,
+                        'campaign' => [
+                            'name' => $promo->title,
+                            'discount_type' => 'info',
+                            'discount_value' => 0,
+                            'description' => $promo->description
+                        ]
+                    ];
+                });
+
+            // Merge results
+            $wallet = $userPromotions->concat($globalPromotions);
 
             return response()->json([
                 'success' => true,
@@ -182,7 +206,6 @@ class PromotionController extends Controller
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('userWallet error: ' . $e->getMessage());
-            // Return empty gracefully — table might not be migrated yet
             return response()->json([
                 'success' => true,
                 'data' => []
