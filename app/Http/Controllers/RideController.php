@@ -377,11 +377,21 @@ class RideController extends Controller
                 $fareAmount = floatval($request->input('fare', $ride->price));
             }
 
+            // Re-apply the promotion discount that was stored at booking time.
+            // We use the already-stored discount_amount rather than re-evaluating eligibility,
+            // ensuring the passenger pays exactly what they were quoted.
+            $discountAmount = floatval($ride->discount_amount ?? 0);
+            if ($discountAmount > 0 && $ride->applied_promotion_id) {
+                $fareAmount = max($fareAmount - $discountAmount, 0);
+                Log::info("completeRide: Promotion #{$ride->applied_promotion_id} discount of {$discountAmount} re-applied. Final fare: {$fareAmount}");
+            }
+
             // Sync the ride price with the final fare amount
             $ride->price = $fareAmount;
             $ride->save();
 
 
+            $commissionRate = 0.15; // Safe fallback
             if ($vt) {
                 $commissionRate = $vt->commission_percentage / 100;
             }
@@ -495,6 +505,17 @@ class RideController extends Controller
                     'calculated_fare' => $fareAmount,
                     'price' => $fareAmount,
                 ]);
+
+                // Handle driver status
+                if ($ride->isPooled()) {
+                    $poolPartner = Ride::where('id', $ride->pool_partner_ride_id)
+                        ->where('status', 'in_progress')
+                        ->first();
+                    $driverModel->status = $poolPartner ? 'on_ride' : 'available';
+                } else {
+                    $driverModel->status = 'available';
+                }
+                $driverModel->save();
 
                 DB::commit();
 
@@ -1079,6 +1100,7 @@ class RideController extends Controller
             'started_at' => $ride->started_at,
             'arrived_at' => $ride->arrived_at,
             'route_polyline' => $ride->route_polyline,
+            'passenger_wallet_balance' => $ride->passenger && $ride->passenger->wallet ? (float)$ride->passenger->wallet->balance : 0.0,
         ];
 
         if ($ride->driver) {
