@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
@@ -129,10 +130,10 @@ export default function RewardsConfigPage() {
                                 <CardDescription>Allow users to earn rewards by inviting friends.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="flex items-center justify-between space-x-2">
+                                <div className="flex items-center justify-between space-x-2 pb-4 border-b">
                                     <Label htmlFor="referral_enabled" className="flex flex-col gap-1">
-                                        <span>Enable Referrals</span>
-                                        <span className="text-muted-foreground font-normal text-xs">Toggle the entire referral system ON/OFF.</span>
+                                        <span className="font-semibold text-base">Enable Referrals</span>
+                                        <span className="text-muted-foreground font-normal text-xs">Toggle the entire automatic referral payout system ON/OFF.</span>
                                     </Label>
                                     <Switch
                                         id="referral_enabled"
@@ -140,17 +141,71 @@ export default function RewardsConfigPage() {
                                         onCheckedChange={(checked) => handleToggle('referral_enabled', checked)}
                                     />
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="referral_reward_amount">Reward Percentage (%)</Label>
-                                    <Input
-                                        id="referral_reward_amount"
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={getConfigValue('referral_reward_amount')}
-                                        onChange={(e) => handleInputChange('referral_reward_amount', e.target.value)}
-                                        placeholder="e.g., 20"
-                                    />
-                                    <p className="text-muted-foreground text-xs">Discount applied to both the inviter and the invitee.</p>
+                                
+                                {/* Inviter Config */}
+                                <div className="space-y-3">
+                                    <h4 className="font-medium text-sm">Reward for the Inviter</h4>
+                                    <p className="text-muted-foreground text-xs">What does the user who shared the code get?</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Discount Type</Label>
+                                            <Select 
+                                                value={getConfigValue('referral_inviter_reward_type') || 'flat'} 
+                                                onValueChange={(val) => handleInputChange('referral_inviter_reward_type', val)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="flat">Flat ETB Amount</SelectItem>
+                                                    <SelectItem value="percent">Percentage Off</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Amount Value</Label>
+                                            <Input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={getConfigValue('referral_inviter_reward_amount')}
+                                                onChange={(e) => handleInputChange('referral_inviter_reward_amount', e.target.value)}
+                                                placeholder="e.g. 50"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Invitee Config */}
+                                <div className="space-y-3 pt-4 border-t">
+                                    <h4 className="font-medium text-sm">Reward for the Invitee</h4>
+                                    <p className="text-muted-foreground text-xs">What does the new user taking their first ride get?</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Discount Type</Label>
+                                            <Select 
+                                                value={getConfigValue('referral_invitee_reward_type') || 'percent'} 
+                                                onValueChange={(val) => handleInputChange('referral_invitee_reward_type', val)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="flat">Flat ETB Amount</SelectItem>
+                                                    <SelectItem value="percent">Percentage Off</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Amount Value</Label>
+                                            <Input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={getConfigValue('referral_invitee_reward_amount')}
+                                                onChange={(e) => handleInputChange('referral_invitee_reward_amount', e.target.value)}
+                                                placeholder="e.g. 30"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -162,13 +217,13 @@ export default function RewardsConfigPage() {
                                     <Sparkles className="h-5 w-5 text-amber-500" />
                                     <CardTitle>Ride Streaks</CardTitle>
                                 </div>
-                                <CardDescription>Reward loyal users for completing multiple rides.</CardDescription>
+                                <CardDescription>Reward loyal users for consistently riding with ETHIOCAB.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="flex items-center justify-between space-x-2">
+                                <div className="flex items-center justify-between space-x-2 pb-4 border-b">
                                     <Label htmlFor="streak_enabled" className="flex flex-col gap-1">
-                                        <span>Enable Streaks</span>
-                                        <span className="text-muted-foreground font-normal text-xs">Reward users after hitting a ride milestone.</span>
+                                        <span className="font-semibold text-base">Enable Milestone Streaks</span>
+                                        <span className="text-muted-foreground font-normal text-xs">Automatically deposit a reward when users hit their target.</span>
                                     </Label>
                                     <Switch
                                         id="streak_enabled"
@@ -176,17 +231,53 @@ export default function RewardsConfigPage() {
                                         onCheckedChange={(checked) => handleToggle('streak_enabled', checked)}
                                     />
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="streak_target_rides">Target Rides (7 Days)</Label>
-                                    <Input
-                                        id="streak_target_rides"
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={getConfigValue('streak_target_rides')}
-                                        onChange={(e) => handleInputChange('streak_target_rides', e.target.value)}
-                                        placeholder="e.g., 5"
-                                    />
-                                    <p className="text-muted-foreground text-xs">Number of completed rides required within a week to earn a reward.</p>
+                                
+                                <div className="space-y-3">
+                                    <h4 className="font-medium text-sm">Milestone Definition</h4>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="streak_target_rides">Target Rides (per 7 Days)</Label>
+                                        <Input
+                                            id="streak_target_rides"
+                                            type="text"
+                                            inputMode="numeric"
+                                            value={getConfigValue('streak_target_rides')}
+                                            onChange={(e) => handleInputChange('streak_target_rides', e.target.value)}
+                                            placeholder="e.g., 5"
+                                        />
+                                        <p className="text-muted-foreground text-xs">Number of completed rides required within a week to hit the streak.</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 pt-4 border-t">
+                                    <h4 className="font-medium text-sm">Payout Reward</h4>
+                                    <p className="text-muted-foreground text-xs">What voucher is deposited into their wallet upon completion?</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Discount Type</Label>
+                                            <Select 
+                                                value={getConfigValue('streak_reward_type') || 'flat'} 
+                                                onValueChange={(val) => handleInputChange('streak_reward_type', val)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="flat">Flat ETB Amount</SelectItem>
+                                                    <SelectItem value="percent">Percentage Off</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Amount Value</Label>
+                                            <Input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={getConfigValue('streak_reward_amount')}
+                                                onChange={(e) => handleInputChange('streak_reward_amount', e.target.value)}
+                                                placeholder="e.g. 50"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

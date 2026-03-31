@@ -81,7 +81,10 @@ class PromotionAutomationService
                 ->exists();
 
             if (!$alreadyAwarded) {
-                $this->issueReward($user, 'streak_reward', "🏆 You completed {$target} rides! Your reward is ready.");
+                $discountType = $this->config->get('streak_reward_type', 'flat');
+                $discountValue = (float) $this->config->get('streak_reward_amount', 50);
+
+                $this->issueReward($user, 'streak_reward', "🏆 You completed {$target} rides! Your reward is ready.", $discountType, $discountValue);
                 // Reset so the next cycle starts fresh
                 $user->update(['streak_progress' => 0]);
             }
@@ -97,26 +100,33 @@ class PromotionAutomationService
             $referrer = User::find($user->referred_by_id);
             
             if ($referrer) {
-                // Award both
-                $this->issueReward($user, 'referral_invitee', "Welcome Gift! Thanks for joining.");
-                $this->issueReward($referrer, 'referral_inviter', "Referral Reward! Your friend just took their first ride.");
+                // Award Invitee (The new user)
+                $inviteeType = $this->config->get('referral_invitee_reward_type', 'percent');
+                $inviteeValue = (float) $this->config->get('referral_invitee_reward_amount', 30);
+                $this->issueReward($user, 'referral_invitee', "Welcome Gift! Thanks for joining.", $inviteeType, $inviteeValue);
+
+                // Award Inviter (The parent referrer)
+                $inviterType = $this->config->get('referral_inviter_reward_type', 'flat');
+                $inviterValue = (float) $this->config->get('referral_inviter_reward_amount', 50);
+                $this->issueReward($referrer, 'referral_inviter', "Referral Reward! Your friend just took their first ride.", $inviterType, $inviterValue);
             }
         }
     }
 
     /**
      * Issue a voucher from a specialized campaign.
+     * Uses updateOrCreate to ensure dynamic config changes apply to new vouchers immediately.
      */
-    protected function issueReward(User $user, string $type, string $message)
+    protected function issueReward(User $user, string $type, string $message, string $discountType = 'flat', float $discountValue = 50.0)
     {
-        // Find or create a hidden system campaign for this reward
-        $campaign = PromotionCampaign::firstOrCreate(
+        // Update or create a hidden system campaign for this reward
+        $campaign = PromotionCampaign::updateOrCreate(
             ['code' => strtoupper($type)],
             [
                 'name' => ucwords(str_replace('_', ' ', $type)),
                 'description' => "Automated reward for {$type}",
-                'discount_type' => 'percent',
-                'discount_value' => $this->config->get('referral_reward_amount', 20),
+                'discount_type' => $discountType,
+                'discount_value' => $discountValue,
                 'is_active' => true,
                 'usage_limit_per_user' => 1
             ]
