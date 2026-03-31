@@ -57,10 +57,13 @@ class PromotionAutomationService
      */
     protected function updateUserActivity(Ride $ride)
     {
-        UserActivityStat::updateOrCreate(
+        // Use firstOrCreate + increment for PostgreSQL compatibility.
+        // DB::raw('col + 1') inside updateOrCreate's VALUES clause breaks PostgreSQL.
+        $stat = UserActivityStat::firstOrCreate(
             ['user_id' => $ride->passenger_id, 'date' => now()->toDateString()],
-            ['rides_completed_count' => \Illuminate\Support\Facades\DB::raw('rides_completed_count + 1')]
+            ['rides_completed_count' => 0]
         );
+        $stat->increment('rides_completed_count');
     }
 
     /**

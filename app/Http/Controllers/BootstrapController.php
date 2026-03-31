@@ -39,6 +39,7 @@ class BootstrapController extends Controller
             'referral' => (bool)$this->config->get('referral_enabled', false),
             'promo' => true,
             'streaks' => (bool)$this->config->get('streak_enabled', false),
+            'driver_streaks' => (bool)$this->config->get('driver_streak_enabled', false),
           ]
         ],
       ], 200);
@@ -55,6 +56,7 @@ class BootstrapController extends Controller
         'email' => $user->email,
         'profile_picture' => $user->profile_picture,
         'company_id' => $user->company_id,
+        'approval_state' => optional($user->driver)->approval_state ?? 'not_submitted',
         'company_status' => (function () use ($user) {
           $ce = $user->getLatestCompanyEmployee();
           if (!$ce) return 'none';
@@ -62,7 +64,6 @@ class BootstrapController extends Controller
           if ($ce->status === 'pending') return 'pending';
           return 'none';
         })(),
-        // Add any other critical user fields here
       ];
     }
 
