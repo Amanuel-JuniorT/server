@@ -47,7 +47,10 @@ class PromoCodeController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        $campaign = PromotionCampaign::create($request->all());
+        $data = $request->all();
+        $data['min_trip_amount'] = $data['min_trip_amount'] ?: 0;
+
+        $campaign = PromotionCampaign::create($data);
 
         AuditService::medium('Promo Code Created', $campaign, "Created financial promo code: {$campaign->code}");
 
@@ -80,7 +83,10 @@ class PromoCodeController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        $campaign->update($request->all());
+        $data = $request->all();
+        $data['min_trip_amount'] = $data['min_trip_amount'] ?: 0;
+
+        $campaign->update($data);
 
         AuditService::medium('Promo Code Updated', $campaign, "Updated financial promo code: {$campaign->code}");
 
