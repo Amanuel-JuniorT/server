@@ -108,6 +108,9 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
     Route::delete('admin/promo-codes/{id}', [\App\Http\Controllers\PromoCodeController::class, 'destroy'])->name('admin.promo-codes.destroy');
     Route::patch('admin/promo-codes/{id}/toggle', [\App\Http\Controllers\PromoCodeController::class, 'toggleActive'])->name('admin.promo-codes.toggle');
 
+    // Rewards Analytics Dashboard (NEW)
+    Route::get('admin/rewards/analytics', [\App\Http\Controllers\Admin\AdminRewardStatsController::class, 'index'])->name('admin.rewards.analytics');
+
     // Rewards Configuration Page
     Route::get('admin/config/rewards', function () {
         $configs = \App\Models\SystemConfiguration::where('group', 'rewards')->get();

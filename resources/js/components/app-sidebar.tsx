@@ -17,6 +17,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
+    BarChart3,
     Bell,
     Building2,
     Car,
@@ -70,6 +71,7 @@ const superAdminNavItems = [
     {
         group: 'System',
         items: [
+            { title: 'Rewards Analytics', href: '/admin/rewards/analytics', icon: BarChart3 },
             { title: 'Promo Codes', href: '/promo-codes', icon: Gift },
             { title: 'Promotions', href: '/promotions', icon: Ticket },
             { title: 'Rewards Config', href: '/admin/config/rewards', icon: Sparkles },

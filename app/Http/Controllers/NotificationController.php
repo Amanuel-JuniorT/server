@@ -429,13 +429,13 @@ class NotificationController extends Controller
     }
 
     /**
-     * Get notification history for the authenticated user (merged with global promotions).
+     * Get unified notification history for the 'Central Hub' (Alerts, News, and Offers).
      */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         
-        // 1. Get personal notifications
+        // 1. Get personal notifications (ALERTS)
         $notifications = UserNotification::where('user_id', $user->id)
             ->get()
             ->map(function($n) {
@@ -449,30 +449,50 @@ class NotificationController extends Controller
                 ];
             });
 
-        // 2. Get global active promotions (announced news)
+        // 2. Get global active promotions (NEWS / banners)
         $promotions = \App\Models\Promotion::active()
             ->where('type', 'promotion')
             ->get()
             ->map(function($p) {
                 return [
-                    'id' => $p->id + 100000, // Offset to avoid ID collision
+                    'id' => $p->id + 100000, 
                     'title' => $p->title,
                     'body' => $p->description,
                     'type' => 'news',
-                    'read_at' => now(), // Global news is "read" by default or handled differently
+                    'read_at' => now(), // News is implicitly read
                     'created_at' => $p->created_at
                 ];
             });
 
-        // Merge and sort
-        $merged = $notifications->concat($promotions)
+        // 3. Get active vouchers (OFFERS)
+        $vouchers = \App\Models\UserPromotion::with('campaign')
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['available', 'applied'])
+            ->get()
+            ->map(function($v) {
+                $discountText = $v->campaign->discount_type === 'percentage' 
+                    ? $v->campaign->discount_value . "% Off" 
+                    : $v->campaign->discount_value . " ETB Off";
+
+                return [
+                    'id' => $v->id + 200000,
+                    'title' => "🎁 Reward: " . $v->campaign->name,
+                    'body' => "You have an active " . $discountText . " voucher! " . ($v->campaign->description ?? ""),
+                    'type' => 'offer',
+                    'read_at' => now(),
+                    'created_at' => $v->created_at
+                ];
+            });
+
+        // Merge, sort, and re-index
+        $merged = $notifications->concat($promotions)->concat($vouchers)
             ->sortByDesc('created_at')
             ->values();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'data' => $merged // Maintain the wrapper structure the app expects
+                'data' => $merged
             ]
         ]);
     }
