@@ -488,6 +488,7 @@ class RideController extends Controller
                     'ride' => $ride,
                     'payment_method' => 'cash',
                     'fare_amount' => $fareAmount,
+                    'discount_amount' => $discountAmount,
                     'driver_earnings' => $driverEarnings,
                     'platform_commission' => $platformCommission,
                     'commission_rate' => $commissionRate
@@ -538,6 +539,7 @@ class RideController extends Controller
                     'payment_method' => 'wallet',
                     'status' => 'pending_payment',
                     'fare_amount' => $fareAmount,
+                    'discount_amount' => $discountAmount,
                     'driver_earnings' => $driverEarnings,
                     'platform_commission' => $platformCommission,
                     'commission_rate' => $commissionRate
@@ -632,12 +634,18 @@ class RideController extends Controller
             $driverWallet->balance += $driverEarnings;
             $driverWallet->save();
 
-            Transaction::create([
+            $driverTransaction = Transaction::create([
                 'wallet_id' => $driverWallet->id,
                 'type' => 'payment',
                 'amount' => $driverEarnings,
                 'note' => 'Ride earnings - Ride #' . $ride->id,
                 'status' => 'approved',
+            ]);
+
+            Log::info("confirmWalletPayment: Driver transaction created", [
+                'transaction_id' => $driverTransaction->id,
+                'wallet_id' => $driverWallet->id,
+                'amount' => $driverEarnings
             ]);
 
             // Credit Platform (Admin User ID 1)
