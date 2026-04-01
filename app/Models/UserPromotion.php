@@ -17,12 +17,14 @@ class UserPromotion extends Model
         'used_at',
         'expires_at',
         'ride_id',
+        'metadata',
     ];
 
     protected $casts = [
         'used_at' => 'datetime',
         'expires_at' => 'datetime',
         'rides_remaining' => 'integer',
+        'metadata' => 'array',
     ];
 
     public function user()
