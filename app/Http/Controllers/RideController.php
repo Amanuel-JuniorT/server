@@ -1101,6 +1101,11 @@ class RideController extends Controller
             'origin_lng' => (float)$ride->origin_lng,
             'destination_lat' => (float)$ride->destination_lat,
             'destination_lng' => (float)$ride->destination_lng,
+            'price' => (float)($ride->price ?? 0.0),
+            'discount_amount' => (float)($ride->discount_amount ?? 0.0),
+            'payment_method' => $ride->payment_method ?? 'cash',
+            'actual_distance' => (float)($ride->actual_distance ?? 0.0),
+            'actual_duration' => (int)($ride->actual_duration ?? 0),
             'base_fare' => $ride->vehicleType ? (float)$ride->vehicleType->base_fare : 140.0,
             'price_per_km' => $ride->vehicleType ? (float)$ride->vehicleType->price_per_km : 25.0,
             'price_per_min' => $ride->vehicleType ? (float)$ride->vehicleType->price_per_minute : 5.0,
@@ -1151,13 +1156,13 @@ class RideController extends Controller
         if ($user->driver) {
             $ride = Ride::with(['passenger', 'driver.user', 'driver.vehicle'])
                 ->where('driver_id', $user->driver->id)
-                ->whereIn('status', ['accepted', 'arrived', 'in_progress'])
+                ->whereIn('status', ['accepted', 'arrived', 'in_progress', 'pending_payment'])
                 ->latest()
                 ->first();
         } else {
             $ride = Ride::with(['passenger', 'driver.user', 'driver.vehicle'])
                 ->where('passenger_id', $user->id)
-                ->whereIn('status', ['requested', 'accepted', 'arrived', 'in_progress'])
+                ->whereIn('status', ['requested', 'accepted', 'arrived', 'in_progress', 'pending_payment'])
                 ->latest()
                 ->first();
         }
