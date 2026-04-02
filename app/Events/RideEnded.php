@@ -96,7 +96,7 @@ class RideEnded implements ShouldBroadcastNow
             ],
             'fare' => [
                 'total' => (float)$this->ride->price,
-                'payment_method' => $this->ride->payment_method ?? 'cash',
+                'payment_method' => $this->ride->cash_payment ? 'cash' : 'wallet',
                 'discount' => (float)($this->ride->discount_amount ?? 0),
             ],
             'timestamps' => [

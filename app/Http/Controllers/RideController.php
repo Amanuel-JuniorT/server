@@ -1103,7 +1103,7 @@ class RideController extends Controller
             'destination_lng' => (float)$ride->destination_lng,
             'price' => (float)($ride->price ?? 0.0),
             'discount_amount' => (float)($ride->discount_amount ?? 0.0),
-            'payment_method' => $ride->payment_method ?? 'cash',
+            'payment_method' => $ride->cash_payment === false ? 'wallet' : 'cash',
             'actual_distance' => (float)($ride->actual_distance ?? 0.0),
             'actual_duration' => (int)($ride->actual_duration ?? 0),
             'base_fare' => $ride->vehicleType ? (float)$ride->vehicleType->base_fare : 140.0,

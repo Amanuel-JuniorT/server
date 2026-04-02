@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Building2, Car, Edit, Eye, Mail, MapPin, MoreHorizontal, Phone, Plus, Trash2, Users, RotateCw } from 'lucide-react';
+import { Building2, Car, Edit, Eye, Mail, MapPin, MoreHorizontal, Phone, Plus, RotateCw, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -269,14 +269,18 @@ export default function CompaniesPage() {
         setIsLoading(true);
 
         try {
-            await router.post(`/admin/invitations/${invitationId}/resend`, {}, {
-                onSuccess: () => {
-                    toast.success('Invitation resent successfully');
+            await router.post(
+                `/admin/invitations/${invitationId}/resend`,
+                {},
+                {
+                    onSuccess: () => {
+                        toast.success('Invitation resent successfully');
+                    },
+                    onError: () => {
+                        toast.error('Failed to resend invitation');
+                    },
                 },
-                onError: () => {
-                    toast.error('Failed to resend invitation');
-                },
-            });
+            );
         } catch (error) {
             toast.error('Failed to resend invitation');
         } finally {
