@@ -181,12 +181,12 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
             {
                 employee_id: employeeId,
                 name: employee.name,
-                address: employee.home_address || '',
-                latitude: employee.home_lat?.toString() || '',
-                longitude: employee.home_lng?.toString() || '',
-                dest_address: '',
-                dest_latitude: '',
-                dest_longitude: '',
+                address: formData.origin_type === 'home' ? (employee.home_address || '') : '',
+                latitude: formData.origin_type === 'home' ? (employee.home_lat?.toString() || '') : '',
+                longitude: formData.origin_type === 'home' ? (employee.home_lng?.toString() || '') : '',
+                dest_address: formData.destination_type === 'home' ? (employee.home_address || '') : '',
+                dest_latitude: formData.destination_type === 'home' ? (employee.home_lat?.toString() || '') : '',
+                dest_longitude: formData.destination_type === 'home' ? (employee.home_lng?.toString() || '') : '',
             },
         ]);
     };
@@ -197,6 +197,36 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
 
     const handleEmployeeAddressChange = (employeeId: number, field: string, value: string) => {
         setSelectedEmployees(selectedEmployees.map((e) => (e.employee_id === employeeId ? { ...e, [field]: value } : e)));
+    };
+
+    const handleOriginTypeChange = (value: 'office' | 'home' | 'custom') => {
+        setFormData({ ...formData, origin_type: value });
+        if (value === 'home') {
+            setSelectedEmployees(currentEmployees => currentEmployees.map(member => {
+                const emp = employees.find(e => e.id === member.employee_id);
+                return {
+                    ...member,
+                    address: emp?.home_address || '',
+                    latitude: emp?.home_lat?.toString() || '',
+                    longitude: emp?.home_lng?.toString() || '',
+                };
+            }));
+        }
+    };
+
+    const handleDestinationTypeChange = (value: 'office' | 'home' | 'custom') => {
+        setFormData({ ...formData, destination_type: value });
+        if (value === 'home') {
+            setSelectedEmployees(currentEmployees => currentEmployees.map(member => {
+                const emp = employees.find(e => e.id === member.employee_id);
+                return {
+                    ...member,
+                    dest_address: emp?.home_address || '',
+                    dest_latitude: emp?.home_lat?.toString() || '',
+                    dest_longitude: emp?.home_lng?.toString() || '',
+                };
+            }));
+        }
     };
 
     const handleEdit = (group: RideGroup) => {
@@ -488,7 +518,7 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                             <Label>From</Label>
                                             <Select
                                                 value={formData.origin_type}
-                                                onValueChange={(value: 'office' | 'home' | 'custom') => setFormData({ ...formData, origin_type: value })}
+                                                onValueChange={handleOriginTypeChange}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue />
@@ -505,7 +535,7 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                             <Label>To</Label>
                                             <Select
                                                 value={formData.destination_type}
-                                                onValueChange={(value: 'office' | 'home' | 'custom') => setFormData({ ...formData, destination_type: value })}
+                                                onValueChange={handleDestinationTypeChange}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue />
