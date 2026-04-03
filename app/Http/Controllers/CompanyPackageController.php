@@ -12,7 +12,31 @@ use Illuminate\Support\Facades\Log;
 class CompanyPackageController extends Controller
 {
     /**
-     * List available ride packages for companies.
+     * Render the Inertia page for company packages.
+     */
+    public function indexInertia()
+    {
+        $user = auth()->user();
+        if (!$user->company_id) {
+            abort(403, 'User not associated with a company.');
+        }
+
+        $company = Company::findOrFail($user->company_id);
+        $packages = RidePackage::where('is_active', true)->orderBy('price', 'asc')->get();
+        $history = CompanyPackagePurchase::with('package')
+            ->where('company_id', $company->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return \Inertia\Inertia::render('company-admin/packages', [
+            'packages' => $packages,
+            'history' => $history,
+            'company' => $company
+        ]);
+    }
+
+    /**
+     * List available ride packages as JSON.
      */
     public function index()
     {

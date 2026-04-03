@@ -10,7 +10,18 @@ use Illuminate\Support\Facades\Validator;
 class RidePackageController extends Controller
 {
     /**
-     * Display a listing of ride packages.
+     * Display a listing of ride packages for the admin dashboard.
+     */
+    public function adminIndex()
+    {
+        $packages = RidePackage::orderBy('created_at', 'desc')->get();
+        return \Inertia\Inertia::render('admin/ride-packages', [
+            'packages' => $packages
+        ]);
+    }
+
+    /**
+     * Display a listing of ride packages as JSON.
      */
     public function index()
     {
