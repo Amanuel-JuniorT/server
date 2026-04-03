@@ -24,6 +24,7 @@ class PromotionCampaign extends Model
         'start_date',
         'end_date',
         'is_active',
+        'target_user_type',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class PromotionCampaign extends Model
         'min_trip_amount' => 'float',
         'total_budget' => 'float',
         'current_spend' => 'float',
+        'target_user_type' => 'string',
     ];
 
     /**

@@ -26,6 +26,7 @@ import {
     Gift,
     LayoutGrid,
     Map,
+    Package,
     Send,
     Settings,
     Sparkles,
@@ -74,6 +75,7 @@ const superAdminNavItems = [
             { title: 'Rewards Analytics', href: '/admin/rewards/analytics', icon: BarChart3 },
             { title: 'Promo Codes', href: '/promo-codes', icon: Gift },
             { title: 'Promotions', href: '/promotions', icon: Ticket },
+            { title: 'Ride Packages', href: '/admin/ride-packages', icon: Package },
             { title: 'Rewards Config', href: '/admin/config/rewards', icon: Sparkles },
             { title: 'Notifications', href: '/notifications', icon: Bell },
             { title: 'System Logs', href: '/logs', icon: Activity },
@@ -99,7 +101,10 @@ const companyAdminNavItems = [
     },
     {
         group: 'Finance',
-        items: [{ title: 'Payment Receipts', href: '/company-admin/payment-receipts', icon: Ticket }],
+        items: [
+            { title: 'Payment Receipts', href: '/company-admin/payment-receipts', icon: Ticket },
+            { title: 'Ride Packages', href: '/company-admin/packages', icon: Package },
+        ],
     },
 ];
 

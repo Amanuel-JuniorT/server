@@ -69,23 +69,40 @@ class CheckScheduledRides extends Command
 
                 if (empty($tokens)) {
                     $this->warn("Ride {$ride->id}: No FCM tokens found for user {$ride->employee->id}.");
-                    continue;
+                } else {
+                    $title = "Ride Scheduled Time";
+                    $body = "Your scheduled company ride is coming up at " . $ride->scheduled_time->format('H:i');
+
+                    \App\Jobs\SendFcmMessage::dispatch(
+                        $tokens,
+                        $title,
+                        $body,
+                        ['type' => 'company_ride_scheduled', 'ride_id' => $ride->id]
+                    );
+                    $this->info("Ride {$ride->id}: Employee notification sent.");
                 }
 
-                $title = "Ride Scheduled Time";
-                $body = "Your scheduled company ride is coming up at " . $ride->scheduled_time->format('H:i');
+                // ALSO NOTIFY DRIVER if assigned
+                if ($ride->driver_id && $ride->driver && $ride->driver->user) {
+                    $driverUser = $ride->driver->user;
+                    $driverTokens = \App\Models\DeviceToken::where('user_id', $driverUser->id)
+                        ->where('app', 'Driver')
+                        ->pluck('token')
+                        ->toArray();
 
-                \App\Jobs\SendFcmMessage::dispatch(
-                    $tokens,
-                    $title,
-                    $body,
-                    ['type' => 'company_ride_scheduled', 'ride_id' => $ride->id]
-                );
+                    if (!empty($driverTokens)) {
+                        \App\Jobs\SendFcmMessage::dispatch(
+                            $driverTokens,
+                            "Upcoming Company Ride",
+                            "You have a scheduled company ride at " . $ride->scheduled_time->format('H:i') . ". Please be ready.",
+                            ['type' => 'company_ride_scheduled_driver', 'ride_id' => $ride->id]
+                        );
+                        $this->info("Ride {$ride->id}: Driver notification sent.");
+                    }
+                }
 
                 $ride->scheduled_notification_sent = true;
                 $ride->save();
-
-                $this->info("Ride {$ride->id}: Notification sent.");
             } catch (\Exception $e) {
                 $this->error("Ride {$ride->id}: Failed to notify. " . $e->getMessage());
             }

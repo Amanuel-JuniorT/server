@@ -41,6 +41,7 @@ class PromoCodeController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'is_active' => 'boolean',
+            'target_user_type' => ['required', Rule::in(['passenger', 'driver'])],
         ]);
 
         if ($validator->fails()) {
@@ -77,6 +78,7 @@ class PromoCodeController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'is_active' => 'boolean',
+            'target_user_type' => ['required', Rule::in(['passenger', 'driver'])],
         ]);
 
         if ($validator->fails()) {

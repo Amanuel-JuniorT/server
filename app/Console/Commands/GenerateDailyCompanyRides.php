@@ -24,10 +24,27 @@ class GenerateDailyCompanyRides extends Command
             ->get();
 
         $count = 0;
+        $notificationService = app(\App\Services\UnifiedNotificationService::class);
+
         foreach ($assignments as $assignment) {
             $group = $assignment->rideGroup;
 
             if (!$group || $group->status !== 'active') {
+                continue;
+            }
+
+            $company = $group->company;
+
+            // Check if company has enough rides in their package
+            if (!$company->hasRemainingRides()) {
+                $this->warn("Company '{$company->name}' has no rides remaining. Skipping group '{$group->group_name}'.");
+                
+                // Notify company admin (limit to once per day per company)
+                $notificationService->notifyUser($company->id, "Ride Balance Exhausted", "Your company ride package is empty. Scheduled rides for '{$group->group_name}' were not generated today.", [
+                    'type' => 'package_depleted',
+                    'company_id' => $company->id
+                ], null, 'Passenger'); // Using 'Passenger' as surrogate for Company Admin app if separate one doesn't exist
+                
                 continue;
             }
 
@@ -46,6 +63,12 @@ class GenerateDailyCompanyRides extends Command
 
             if ($exists) {
                 $this->line("Ride for group '{$group->group_name}' already exists for today. Skipping.");
+                continue;
+            }
+
+            // Consume one ride from the package for this group trip
+            if (!$company->consumeRide()) {
+                $this->error("Failed to consume ride for company '{$company->name}'.");
                 continue;
             }
 
@@ -97,6 +120,14 @@ class GenerateDailyCompanyRides extends Command
                     ]);
                     $count++;
                 }
+            }
+
+            // Low balance notification (optional, e.g. < 5 rides)
+            if ($company->total_remaining_rides > 0 && $company->total_remaining_rides < 5) {
+                $notificationService->notifyUser($company->id, "Low Ride Balance", "Your ride package is low ({$company->total_remaining_rides} rides left). Please top up soon.", [
+                    'type' => 'package_low',
+                    'company_id' => $company->id
+                ], null, 'Passenger');
             }
 
             $this->info("Generated ride(s) for group: {$group->group_name} at {$timeString}");

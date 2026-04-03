@@ -381,23 +381,34 @@ class RideController extends Controller
             // We use the already-stored discount_amount rather than re-evaluating eligibility,
             // ensuring the passenger pays exactly what they were quoted.
             $discountAmount = floatval($ride->discount_amount ?? 0);
+            
+            // The gross fare is what the driver is paid on (pre-discount)
+            $grossFare = $fareAmount;
+            
+            // The passenger total is what the passenger actually pays (post-discount)
+            $passengerTotal = $fareAmount;
             if ($discountAmount > 0 && $ride->applied_promotion_id) {
-                $fareAmount = max($fareAmount - $discountAmount, 0);
-                Log::info("completeRide: Promotion #{$ride->applied_promotion_id} discount of {$discountAmount} re-applied. Final fare: {$fareAmount}");
+                $passengerTotal = max($fareAmount - $discountAmount, 0);
+                Log::info("completeRide: Promotion #{$ride->applied_promotion_id} discount of {$discountAmount} re-applied. Passenger pays: {$passengerTotal}");
             }
 
-            // Sync the ride price with the final fare amount
-            $ride->price = $fareAmount;
+            // Sync the ride record with both amounts
+            $ride->original_fare = $grossFare;
+            $ride->discount_amount = $discountAmount;
+            $ride->price = $passengerTotal;
             $ride->save();
-
 
             $commissionRate = 0.15; // Safe fallback
             if ($vt) {
                 $commissionRate = $vt->commission_percentage / 100;
             }
 
-            $platformCommission = $fareAmount * $commissionRate;
-            $driverEarnings = $fareAmount - $platformCommission;
+            // CRITICAL FIX: Driver earnings and platform commission are calculated on GROSS fare (pre-discount)
+            $platformCommissionValue = $grossFare * $commissionRate;
+            
+            // The platform absorbs the discount cost
+            $platformCommission = $platformCommissionValue - $discountAmount;
+            $driverEarnings = $grossFare - $platformCommissionValue;
 
             DB::beginTransaction();
             // Handle payment based on selected payment method
@@ -431,13 +442,13 @@ class RideController extends Controller
                 // Create payment record for cash payment
                 Payment::create([
                     'ride_id' => $ride->id,
-                    'amount' => $fareAmount,
+                    'amount' => $passengerTotal,
                     'method' => 'cash',
                     'status' => 'paid',
                     'paid_at' => now(),
                 ]);
 
-                Log::info("Cash payment completed: Ride {$ride->id}, Driver {$driverUserId} paid commission: {$platformCommission}");
+                Log::info("Cash payment completed: Ride {$ride->id}, Passenger paid: {$passengerTotal}, Driver paid commission: {$platformCommission}");
 
                 // Update ride status and actual data
                 $ride->update([
@@ -447,8 +458,8 @@ class RideController extends Controller
                     'actual_distance' => $actualDistance,
                     'actual_duration' => (int) round($actualDuration),
                     'waiting_minutes' => $waitingMinutes,
-                    'calculated_fare' => $fareAmount,
-                    'price' => $fareAmount,
+                    'calculated_fare' => $grossFare,
+                    'price' => $passengerTotal,
                 ]);
 
                 // Handle Promotion Usage
@@ -503,8 +514,8 @@ class RideController extends Controller
                     'actual_distance' => $actualDistance,
                     'actual_duration' => (int) round($actualDuration),
                     'waiting_minutes' => $waitingMinutes,
-                    'calculated_fare' => $fareAmount,
-                    'price' => $fareAmount,
+                    'calculated_fare' => $grossFare,
+                    'price' => $passengerTotal,
                 ]);
 
                 // Handle driver status
@@ -524,8 +535,8 @@ class RideController extends Controller
                 $this->notificationService->notifyUser(
                     $ride->passenger_id,
                     "Payment Required",
-                    "Your ride is complete. Please authorize the payment of ETB {$fareAmount} from your wallet.",
-                    ['ride_id' => $ride->id, 'fare' => $fareAmount, 'status' => 'pending_payment'],
+                    "Your ride is complete. Please authorize the payment of ETB {$passengerTotal} from your wallet.",
+                    ['ride_id' => $ride->id, 'fare' => $passengerTotal, 'status' => 'pending_payment'],
                     null,
                     'Passenger'
                 );
@@ -538,7 +549,8 @@ class RideController extends Controller
                     'ride' => $ride,
                     'payment_method' => 'wallet',
                     'status' => 'pending_payment',
-                    'fare_amount' => $fareAmount,
+                    'fare_amount' => $passengerTotal,
+                    'original_fare' => $grossFare,
                     'discount_amount' => $discountAmount,
                     'driver_earnings' => $driverEarnings,
                     'platform_commission' => $platformCommission,
@@ -583,18 +595,25 @@ class RideController extends Controller
                 return response()->json(['message' => 'Invalid wallet password'], 422);
             }
 
-            $fareAmount = $ride->price;
+            // CRITICAL FIX: Use original_fare (pre-discount) for driver/platform calculations
+            $passengerPaidAmount = $ride->price; // This is the discounted amount the passenger owes
+            $grossFare = $ride->original_fare ?? $passengerPaidAmount;
+            $discountAmount = $ride->discount_amount ?? 0;
+
             $commissionRate = 0.15; // default fallback
             if ($ride->vehicleType) {
                 $commissionRate = $ride->vehicleType->commission_percentage / 100;
             }
-            $platformCommission = $fareAmount * $commissionRate;
-            $driverEarnings = $fareAmount - $platformCommission;
+
+            $platformCommissionValue = $grossFare * $commissionRate;
+            // The platform absorbs the discount cost
+            $platformCommission = $platformCommissionValue - $discountAmount;
+            $driverEarnings = $grossFare - $platformCommissionValue;
 
             // Wallet deduction logic
             $passengerWallet = Wallet::firstOrCreate(['user_id' => $user->id]);
             $walletFee = $ride->vehicleType ? $ride->vehicleType->wallet_transaction_fixed_fee : 0;
-            $totalToDeduct = $fareAmount + $walletFee;
+            $totalToDeduct = $passengerPaidAmount + $walletFee;
 
             if ($passengerWallet->balance < $totalToDeduct) {
                 DB::rollBack();
@@ -612,7 +631,7 @@ class RideController extends Controller
             Transaction::create([
                 'wallet_id' => $passengerWallet->id,
                 'type' => 'payment',
-                'amount' => -$fareAmount,
+                'amount' => -$passengerPaidAmount,
                 'note' => 'Ride payment - Ride #' . $ride->id,
                 'status' => 'approved',
             ]);
@@ -674,7 +693,7 @@ class RideController extends Controller
             // Finalize Payment and Ride record
             Payment::create([
                 'ride_id' => $ride->id,
-                'amount' => $fareAmount,
+                'amount' => $passengerPaidAmount,
                 'method' => 'wallet',
                 'status' => 'paid',
                 'paid_at' => now(),
@@ -713,7 +732,7 @@ class RideController extends Controller
             $this->notificationService->notifyUser(
                 $driverUserId,
                 "Payment Received",
-                "Passenger has authorized payment of ETB {$fareAmount}. Your earnings: ETB {$driverEarnings}.",
+                "Passenger has authorized payment of ETB {$passengerPaidAmount}. Your earnings: ETB {$driverEarnings}. (Promo applied)",
                 ['ride_id' => $ride->id, 'earnings' => $driverEarnings],
                 null,
                 'Driver'
@@ -722,7 +741,13 @@ class RideController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Payment authorized and ride completed',
-                'ride' => $ride
+                'ride' => $ride,
+                'fare_breakdown' => [
+                    'original_fare' => $grossFare,
+                    'discount' => $discountAmount,
+                    'passenger_paid' => $passengerPaidAmount,
+                    'driver_earned' => $driverEarnings
+                ]
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();

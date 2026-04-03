@@ -17,11 +17,12 @@ class PromotionEngineService
      * @param User $user
      * @param float $originalFare
      * @param array $context Additional context like location, vehicle type, etc.
+     * @param string $targetType The type of user searching (passenger or driver)
      * @return array [applied_promotion_id, discount_amount, final_fare]
      */
-    public function applyBestPromotion(User $user, float $originalFare, array $context = [])
+    public function applyBestPromotion(User $user, float $originalFare, array $context = [], string $targetType = 'passenger')
     {
-        $activePromotions = $this->getAvailablePromotionsForUser($user);
+        $activePromotions = $this->getAvailablePromotionsForUser($user, $targetType);
 
         if ($activePromotions->isEmpty()) {
             return [
@@ -46,10 +47,13 @@ class PromotionEngineService
 
             $discount = $this->calculateDiscount($campaign, $originalFare);
 
+            // Logic: Pick the best discount. 
+            // If discounts are equal, pick the most recently earned one (latest).
             if ($discount > $bestDiscount) {
                 $bestDiscount = $discount;
                 $bestPromotionId = $campaign->id;
             }
+            // If they are equal, we keep the first one found (the newest, due to the query's latest() sort)
         }
 
         return [
@@ -92,24 +96,27 @@ class PromotionEngineService
      * Get promotions currently in the user's wallet that are valid for use.
      *
      * @param User $user
+     * @param string $targetType
      * @return \Illuminate\Support\Collection
      */
-    public function getAvailablePromotionsForUser(User $user)
+    public function getAvailablePromotionsForUser(User $user, string $targetType = 'passenger')
     {
         return UserPromotion::with('campaign')
             ->where('user_id', $user->id)
             ->whereIn('status', ['available', 'applied'])
-            ->whereHas('campaign', function ($query) {
+            ->whereHas('campaign', function ($query) use ($targetType) {
                 $query->where('is_active', true)
+                    ->where('target_user_type', $targetType)
                     ->where(function ($q) {
                         $q->whereNull('start_date')
                           ->orWhere('start_date', '<=', Carbon::now());
                     })
                     ->where(function ($q) {
                         $q->whereNull('end_date')
-                          ->orWhere('end_date', '>=', Carbon::now());
+                           ->orWhere('end_date', '>=', Carbon::now());
                     });
             })
+            ->latest() // Load the most recently earned ones first
             ->get();
     }
 

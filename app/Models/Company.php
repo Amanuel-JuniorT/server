@@ -19,7 +19,8 @@ class Company extends Model
     'email',
     'is_active',
     'billing_type',
-    'credit_limit'
+    'credit_limit',
+    'total_remaining_rides'
   ];
 
   protected $casts = [
@@ -28,6 +29,7 @@ class Company extends Model
     'default_origin_lng' => 'decimal:7',
     'billing_type' => 'string',
     'credit_limit' => 'decimal:2',
+    'total_remaining_rides' => 'integer',
   ];
 
   protected $appends = ['setup_status'];
@@ -75,6 +77,46 @@ class Company extends Model
   public function rides(): HasMany
   {
     return $this->hasMany(CompanyGroupRideInstance::class);
+  }
+
+  public function packagePurchases(): HasMany
+  {
+    return $this->hasMany(CompanyPackagePurchase::class);
+  }
+
+  /**
+   * Check if the company has any remaining rides in their packages
+   */
+  public function hasRemainingRides(): bool
+  {
+    return $this->total_remaining_rides > 0;
+  }
+
+  /**
+   * Consume one ride from the oldest active package
+   */
+  public function consumeRide(): bool
+  {
+    if (!$this->hasRemainingRides()) {
+        return false;
+    }
+
+    $purchase = $this->packagePurchases()
+        ->where('status', 'active')
+        ->where('rides_remaining', '>', 0)
+        ->orderBy('created_at', 'asc')
+        ->first();
+
+    if ($purchase) {
+        $purchase->decrement('rides_remaining');
+        if ($purchase->rides_remaining <= 0) {
+            $purchase->update(['status' => 'depleted']);
+        }
+        $this->decrement('total_remaining_rides');
+        return true;
+    }
+
+    return false;
   }
 
   /**

@@ -28,6 +28,7 @@ interface PromotionCampaign {
     start_date: string | null;
     end_date: string | null;
     is_active: boolean;
+    target_user_type: 'passenger' | 'driver';
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -52,6 +53,7 @@ export default function PromoCodesPage() {
         start_date: '',
         end_date: '',
         is_active: true,
+        target_user_type: 'passenger' as 'passenger' | 'driver',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -141,6 +143,23 @@ export default function PromoCodesPage() {
                                         />
                                         {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
                                     </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="target_user_type" className="font-bold">Target Audience <span className="text-red-500">*</span></Label>
+                                    <Select 
+                                        value={data.target_user_type} 
+                                        onValueChange={(val: any) => setData('target_user_type', val)}
+                                    >
+                                        <SelectTrigger className="border-emerald-500 focus-visible:ring-emerald-500">
+                                            <SelectValue placeholder="Select target audience..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="passenger">Passengers Only (Ride Discount)</SelectItem>
+                                            <SelectItem value="driver">Drivers Only (Earnings Reward)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.target_user_type && <p className="text-xs text-red-500">{errors.target_user_type}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -313,9 +332,12 @@ export default function PromoCodesPage() {
                                                     )}
                                                     {campaign.usage_limit_per_user && (
                                                         <span className="text-xs text-slate-500 font-medium bg-slate-100 inline-block px-1.5 py-0.5 rounded w-fit">
-                                                            {campaign.usage_limit_per_user} uses / passenger
+                                                            {campaign.usage_limit_per_user} uses / {campaign.target_user_type}
                                                         </span>
                                                     )}
+                                                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded w-fit ${campaign.target_user_type === 'passenger' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                                        {campaign.target_user_type} Reward
+                                                    </span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="align-middle">

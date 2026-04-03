@@ -285,6 +285,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/admin/company/{companyId}/ride-groups/{groupId}/members/{employeeId}', [CompanyRideGroupController::class, 'removeMember']);
     Route::post('/admin/company/{companyId}/ride-groups/{groupId}/assign', [CompanyRideGroupController::class, 'assignDriver']);
 
+    // Ride Packages (Super Admin)
+    Route::apiResource('/admin/ride-packages', \App\Http\Controllers\Admin\RidePackageController::class);
+
+    // Company Packages (Company Admin)
+    Route::get('/company/{companyId}/packages', [App\Http\Controllers\CompanyPackageController::class, 'index']);
+    Route::post('/company/{companyId}/packages/purchase', [App\Http\Controllers\CompanyPackageController::class, 'purchase']);
+    Route::get('/company/{companyId}/packages/history', [App\Http\Controllers\CompanyPackageController::class, 'history']);
+
     // Payment Receipts
     Route::post('/admin/company/{companyId}/payment-receipts', [CompanyPaymentReceiptController::class, 'store']);
     Route::get('/admin/company/{companyId}/payment-receipts', [CompanyPaymentReceiptController::class, 'index']);
