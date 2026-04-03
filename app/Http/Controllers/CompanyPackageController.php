@@ -50,7 +50,7 @@ class CompanyPackageController extends Controller
     /**
      * Purchase a ride package.
      */
-    public function purchase(Request $request, $companyId)
+    public function purchase(Request $request, $companyId = null)
     {
         $request->validate([
             'package_id' => 'required|exists:ride_packages,id',
@@ -58,6 +58,16 @@ class CompanyPackageController extends Controller
 
         try {
             DB::beginTransaction();
+
+            // If ID is not in URL, get it from the authenticated user
+            $companyId = $companyId ?? auth()->user()->company_id;
+
+            if (!$companyId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is not associated with any company.'
+                ], 403);
+            }
 
             $company = Company::findOrFail($companyId);
             $package = RidePackage::findOrFail($request->package_id);
