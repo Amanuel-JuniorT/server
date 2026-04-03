@@ -24,6 +24,7 @@ interface PurchaseHistory {
     rides_remaining: number;
     amount_paid: number;
     status: string;
+    company_payment_receipt_id: number | null;
     created_at: string;
 }
 
@@ -52,11 +53,11 @@ export default function CompanyPackagesPage() {
         if (!selectedPackage) return;
         
         setIsProcessing(true);
-        router.post(`/company/${company.id}/packages/purchase`, {
+        router.post(`/company-admin/packages/purchase`, {
             package_id: selectedPackage.id
         }, {
             onSuccess: () => {
-                toast.success(`Successfully purchased ${selectedPackage.name}!`);
+                toast.success(`Package purchase initiated! Please upload a bank receipt to activate your rides.`);
                 setIsConfirmOpen(false);
                 setSelectedPackage(null);
             },
@@ -168,7 +169,26 @@ export default function CompanyPackagesPage() {
                                                     {new Date(item.created_at).toLocaleDateString()}
                                                 </TableCell>
                                                 <TableCell className="text-right font-bold text-sm">
-                                                    {item.amount_paid} <span className="text-[10px] text-muted-foreground uppercase">etb</span>
+                                                    <div className="flex flex-col items-end">
+                                                        <div>{item.amount_paid} <span className="text-[10px] text-muted-foreground uppercase">etb</span></div>
+                                                        <div className={`text-[10px] px-2 py-0.5 rounded-full mt-1 ${
+                                                            item.status === 'active' ? 'bg-green-100 text-green-700' : 
+                                                            item.status === 'pending_payment' ? 'bg-amber-100 text-amber-700 animate-pulse' : 
+                                                            'bg-slate-100 text-slate-700'
+                                                        }`}>
+                                                            {item.status.replace('_', ' ')}
+                                                        </div>
+                                                        {item.status === 'pending_payment' && !item.company_payment_receipt_id && (
+                                                            <Button 
+                                                                variant="link" 
+                                                                size="sm" 
+                                                                className="h-auto p-0 text-[10px] text-indigo-600 underline"
+                                                                onClick={() => router.get('/company-admin/payment-receipts', { package_purchase_id: item.id })}
+                                                            >
+                                                                Upload Receipt
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

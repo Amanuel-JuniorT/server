@@ -69,18 +69,17 @@ class CompanyPackageController extends Controller
                 ], 400);
             }
 
-            // Create purchase record
+            // Create purchase record in pending state
             $purchase = CompanyPackagePurchase::create([
                 'company_id' => $company->id,
                 'package_id' => $package->id,
                 'rides_purchased' => $package->ride_count,
                 'rides_remaining' => $package->ride_count,
                 'amount_paid' => $package->price,
-                'status' => 'active',
+                'status' => 'pending_payment',
             ]);
 
-            // Update company total balance
-            $company->increment('total_remaining_rides', $package->ride_count);
+            // Rides are NOT added yet. They will be added upon receipt verification.
 
             // Record transaction in wallet history (optional, if we want to show it there)
             // But packages might be paid via offline receipt first. 

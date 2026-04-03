@@ -39,10 +39,20 @@ export default function CompanyAdminPaymentReceiptsPage({ companyId }: { company
         contract_period_end: '',
         receipt_image_url: '',
         amount: '',
+        package_purchase_id: null as number | null,
     });
 
     useEffect(() => {
         fetchReceipts();
+
+        // Check for package_purchase_id in URL
+        const params = new URLSearchParams(window.location.search);
+        const packagePurchaseId = params.get('package_purchase_id');
+        if (packagePurchaseId) {
+            setFormData(prev => ({ ...prev, package_purchase_id: parseInt(packagePurchaseId) }));
+            setIsSubmitOpen(true);
+            toast.info('Please upload your receipt for the selected ride package.');
+        }
     }, [companyId]);
 
     const fetchReceipts = async () => {
@@ -116,6 +126,7 @@ export default function CompanyAdminPaymentReceiptsPage({ companyId }: { company
             contract_period_end: '',
             receipt_image_url: '',
             amount: '',
+            package_purchase_id: null,
         });
     };
 
@@ -161,7 +172,11 @@ export default function CompanyAdminPaymentReceiptsPage({ companyId }: { company
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>Submit Payment Receipt</DialogTitle>
-                                <DialogDescription>Upload your payment receipt for admin verification</DialogDescription>
+                                <DialogDescription>
+                                    {formData.package_purchase_id 
+                                        ? "Upload your bank receipt to activate your ride package bundle." 
+                                        : "Upload your payment receipt for admin verification"}
+                                </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div className="grid gap-4">

@@ -21,6 +21,7 @@ class CompanyPaymentReceiptController extends Controller
             'contract_period_end' => 'required|date|after:contract_period_start',
             'receipt_image_url' => 'required|url',
             'amount' => 'required|numeric|min:0',
+            'package_purchase_id' => 'nullable|exists:company_package_purchases,id',
         ]);
 
         if ($validator->fails()) {
@@ -39,6 +40,14 @@ class CompanyPaymentReceiptController extends Controller
                 'amount' => $request->amount,
                 'status' => 'pending',
             ]);
+
+            // If this receipt is for a specific package purchase, link it
+            if ($request->package_purchase_id) {
+                $purchase = \App\Models\CompanyPackagePurchase::find($request->package_purchase_id);
+                if ($purchase && $purchase->company_id == $companyId) {
+                    $purchase->update(['company_payment_receipt_id' => $receipt->id]);
+                }
+            }
 
             // Broadcast notification to admins
             try {
@@ -130,6 +139,27 @@ class CompanyPaymentReceiptController extends Controller
             }
 
             $receipt->verify($request->user()->id);
+
+            // ACTIVATION LOGIC for Ride Packages
+            $purchase = \App\Models\CompanyPackagePurchase::where('company_payment_receipt_id', $receipt->id)
+                ->where('status', 'pending_payment')
+                ->first();
+
+            if ($purchase) {
+                $purchase->update(['status' => 'active']);
+                
+                // Add the rides to the company balance
+                $company = \App\Models\Company::find($purchase->company_id);
+                if ($company) {
+                    $company->increment('total_remaining_rides', $purchase->rides_purchased);
+                    
+                    Log::info("Ride Package Activated", [
+                        'purchase_id' => $purchase->id,
+                        'company_id' => $company->id,
+                        'rides_added' => $purchase->rides_purchased
+                    ]);
+                }
+            }
 
             AuditService::high('Company Receipt Verified', $receipt, "Verified receipt of {$receipt->amount} ETB for company: {$receipt->company->name}");
 

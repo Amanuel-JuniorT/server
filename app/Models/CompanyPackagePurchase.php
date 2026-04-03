@@ -16,6 +16,7 @@ class CompanyPackagePurchase extends Model
         'rides_remaining',
         'amount_paid',
         'status',
+        'company_payment_receipt_id',
     ];
 
     protected $casts = [
@@ -34,6 +35,11 @@ class CompanyPackagePurchase extends Model
     public function package()
     {
         return $this->belongsTo(RidePackage::class, 'package_id');
+    }
+
+    public function receipt()
+    {
+        return $this->belongsTo(CompanyPaymentReceipt::class, 'company_payment_receipt_id');
     }
 
     /**
