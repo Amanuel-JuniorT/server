@@ -104,6 +104,9 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
     // Promo Codes Management (Financial Engine)
     Route::get('promo-codes', [\App\Http\Controllers\PromoCodeController::class, 'index'])->name('admin.promo-codes.index');
     Route::get('admin/ride-packages', [\App\Http\Controllers\Admin\RidePackageController::class, 'adminIndex'])->name('admin.ride-packages.index');
+    Route::post('admin/ride-packages', [\App\Http\Controllers\Admin\RidePackageController::class, 'store'])->name('admin.ride-packages.store');
+    Route::put('admin/ride-packages/{package}', [\App\Http\Controllers\Admin\RidePackageController::class, 'update'])->name('admin.ride-packages.update');
+    Route::delete('admin/ride-packages/{package}', [\App\Http\Controllers\Admin\RidePackageController::class, 'destroy'])->name('admin.ride-packages.destroy');
     Route::post('admin/promo-codes', [\App\Http\Controllers\PromoCodeController::class, 'store'])->name('admin.promo-codes.store');
     Route::put('admin/promo-codes/{id}', [\App\Http\Controllers\PromoCodeController::class, 'update'])->name('admin.promo-codes.update');
     Route::delete('admin/promo-codes/{id}', [\App\Http\Controllers\PromoCodeController::class, 'destroy'])->name('admin.promo-codes.destroy');
@@ -204,6 +207,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsCompanyA
     })->name('company-admin.payment-receipts');
 
     Route::get('packages', [\App\Http\Controllers\CompanyPackageController::class, 'indexInertia'])->name('company-admin.packages');
+    Route::post('packages/purchase', [\App\Http\Controllers\CompanyPackageController::class, 'purchase'])->name('company-admin.packages.purchase');
 
     // JSON API endpoints for ride groups (company admin can only access their own company)
     Route::get('api/ride-groups', function (Illuminate\Http\Request $request) {

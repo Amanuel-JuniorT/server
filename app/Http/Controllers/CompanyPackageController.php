@@ -88,14 +88,18 @@ class CompanyPackageController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Package purchased successfully',
-                'data' => [
-                    'purchase' => $purchase,
-                    'new_balance' => $company->total_remaining_rides
-                ]
-            ]);
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Package purchased successfully',
+                    'data' => [
+                        'purchase' => $purchase,
+                        'new_balance' => $company->total_remaining_rides
+                    ]
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Package purchased successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to purchase ride package', [

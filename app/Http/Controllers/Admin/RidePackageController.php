@@ -54,11 +54,15 @@ class RidePackageController extends Controller
 
         $package = RidePackage::create($request->all());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ride package created successfully',
-            'data' => $package
-        ], 201);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Ride package created successfully',
+                'data' => $package
+            ], 201);
+        }
+
+        return redirect()->back()->with('success', 'Ride package created successfully');
     }
 
     /**
@@ -94,17 +98,21 @@ class RidePackageController extends Controller
 
         $package->update($request->all());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ride package updated successfully',
-            'data' => $package
-        ]);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Ride package updated successfully',
+                'data' => $package
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Ride package updated successfully');
     }
 
     /**
      * Remove the specified ride package.
      */
-    public function destroy(RidePackage $package)
+    public function destroy(Request $request, RidePackage $package)
     {
         // Optional: Check if it has purchases before deleting
         if ($package->purchases()->exists()) {
@@ -116,9 +124,13 @@ class RidePackageController extends Controller
 
         $package->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ride package deleted successfully'
-        ]);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Ride package deleted successfully'
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Ride package deleted successfully');
     }
 }
