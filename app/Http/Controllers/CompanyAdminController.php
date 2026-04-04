@@ -39,6 +39,15 @@ class CompanyAdminController extends Controller
             'total_rides' => CompanyGroupRideInstance::where('company_id', $company->id)->count(),
             'scheduled_rides' => CompanyGroupRideInstance::where('company_id', $company->id)->where('status', 'requested')->count(),
             'completed_rides' => CompanyGroupRideInstance::where('company_id', $company->id)->where('status', 'completed')->count(),
+            'ride_credits' => [
+                'remaining' => $company->total_remaining_rides,
+                'total_purchased' => \App\Models\CompanyPackagePurchase::where('company_id', $company->id)
+                    ->where('status', 'active')
+                    ->sum('rides_purchased'),
+                'pending_packages' => \App\Models\CompanyPackagePurchase::where('company_id', $company->id)
+                    ->where('status', 'pending_payment')
+                    ->count(),
+            ]
         ];
 
         return Inertia::render('company-admin/dashboard', [

@@ -217,6 +217,14 @@ class CompanyRideGroupController extends Controller
         try {
             DB::beginTransaction();
 
+            $company = \App\Models\Company::findOrFail($companyId);
+            if ($company->total_remaining_rides <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your company has no ride credits. Please purchase a ride package to create new ride groups.'
+                ], 403);
+            }
+
             $group = CompanyRideGroup::create([
                 'company_id'          => $companyId,
                 'group_name'          => $request->group_name,

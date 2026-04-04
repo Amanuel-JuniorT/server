@@ -65,6 +65,7 @@ interface CompanyInfo {
     address: string;
     latitude: number;
     longitude: number;
+    total_remaining_rides: number;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -713,6 +714,39 @@ export default function CompanyAdminRideGroupsPage({ companyId }: { companyId: n
                                                 No employees added yet. Select employees from the dropdown above.
                                             </div>
                                         )}
+
+                                        {/* Usage Summary */}
+                                        <div className="mt-6 rounded-lg bg-neutral-50 p-4 border border-neutral-200 dark:bg-neutral-900/50 dark:border-neutral-800">
+                                            <h4 className="text-sm font-semibold mb-2">Ride Usage Summary</h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Daily Consumption:</span>
+                                                    <span className="font-medium">{selectedEmployees.length} rides / day</span>
+                                                </div>
+                                                <div className="flex justify-between border-t pt-2 mt-2">
+                                                    <span className="text-muted-foreground">Available Balance:</span>
+                                                    <span className={cn(
+                                                        "font-medium",
+                                                        (companyInfo?.total_remaining_rides || 0) < selectedEmployees.length 
+                                                            ? "text-red-500" 
+                                                            : "text-green-600"
+                                                    )}>
+                                                        {companyInfo?.total_remaining_rides || 0} rides
+                                                    </span>
+                                                </div>
+                                                {(companyInfo?.total_remaining_rides || 0) < selectedEmployees.length && (
+                                                    <p className="text-xs text-red-500 mt-2 font-medium">
+                                                        ⚠️ Warning: You don't have enough credits for the first day's rides. 
+                                                        Please top up your balance soon.
+                                                    </p>
+                                                )}
+                                                {(companyInfo?.total_remaining_rides || 0) === 0 && (
+                                                    <p className="text-xs text-red-600 mt-1 italic">
+                                                        Creation will be blocked until you purchase a ride package.
+                                                    </p>                                                
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 

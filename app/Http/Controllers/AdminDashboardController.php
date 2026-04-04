@@ -142,6 +142,7 @@ class AdminDashboardController extends Controller
             'active_companies' => Company::where('is_active', true)->count(),
             'total_employees' => CompanyEmployee::where('status', 'approved')->count(),
             'pending_requests' => CompanyEmployee::where('status', 'pending')->count(),
+            'total_ride_balance' => Company::sum('total_remaining_rides'),
         ];
 
         // Attach pending invitation ID for each company if one exists
@@ -1080,6 +1081,7 @@ class AdminDashboardController extends Controller
             'address' => 'nullable|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255|unique:companies,email,' . $id,
+            'total_remaining_rides' => 'nullable|integer|min:0',
         ], [
             'name.unique' => 'A company with this name already exists.',
             'code.unique' => 'A company with this code already exists.',
@@ -1097,7 +1099,8 @@ class AdminDashboardController extends Controller
                 'description',
                 'address',
                 'phone',
-                'email'
+                'email',
+                'total_remaining_rides'
             ]);
 
             if ($request->has('code') && !empty($request->code)) {

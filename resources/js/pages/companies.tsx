@@ -26,6 +26,7 @@ interface Company {
     is_active: boolean;
     employees_count?: number;
     pending_invitation_id?: number | null;
+    total_remaining_rides: number;
     created_at: string;
     updated_at: string;
 }
@@ -59,6 +60,7 @@ export default function CompaniesPage() {
                 active_companies: number;
                 total_employees: number;
                 pending_requests: number;
+                total_ride_balance: number;
             };
         }
     >().props;
@@ -81,6 +83,7 @@ export default function CompaniesPage() {
         email: '',
         is_active: true,
         admin_email: '',
+        total_remaining_rides: 0,
     });
 
     const [assignDriverForm, setAssignDriverForm] = useState({
@@ -101,6 +104,7 @@ export default function CompaniesPage() {
             email: '',
             is_active: true,
             admin_email: '',
+            total_remaining_rides: 0,
         });
     };
 
@@ -301,6 +305,7 @@ export default function CompaniesPage() {
             is_active: company.is_active,
             admin_email: '', // Not editable in edit mode
             admin_password: '', // Not editable in edit mode
+            total_remaining_rides: company.total_remaining_rides || 0,
         });
         setIsEditDialogOpen(true);
     };
@@ -541,6 +546,15 @@ export default function CompaniesPage() {
                             <div className="text-2xl font-bold">{stats?.pending_requests || 0}</div>
                         </CardContent>
                     </Card>
+                    <Card className="bg-indigo-50/30 dark:bg-indigo-950/10 border-indigo-100 dark:border-indigo-900/30">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-indigo-700 dark:text-indigo-400">Total Ride Balance</CardTitle>
+                            <Car className="text-indigo-600 h-4 w-4" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{stats?.total_ride_balance || 0}</div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Search and Filters */}
@@ -563,6 +577,7 @@ export default function CompaniesPage() {
                                     <TableHead className="w-[300px]">Company</TableHead>
                                     <TableHead className="w-[100px]">Code</TableHead>
                                     <TableHead className="w-[120px]">Employees</TableHead>
+                                    <TableHead className="w-[100px]">Rides Left</TableHead>
                                     <TableHead className="w-[250px]">Contact</TableHead>
                                     <TableHead className="w-[100px]">Status</TableHead>
                                     <TableHead className="w-[120px]">Created</TableHead>
@@ -612,6 +627,12 @@ export default function CompaniesPage() {
                                                 <div className="flex items-center text-sm">
                                                     <Users className="text-muted-foreground mr-1 h-3 w-3" />
                                                     <span className="font-medium">{company.employees_count || 0}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="w-[100px]">
+                                                <div className="flex items-center text-sm">
+                                                    <Car className="text-indigo-500 mr-1 h-3 w-3" />
+                                                    <span className="font-bold text-indigo-700 dark:text-indigo-400">{company.total_remaining_rides || 0}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="w-[250px]">
@@ -755,6 +776,22 @@ export default function CompaniesPage() {
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         />
                                     </div>
+                                </div>
+                                <div className="grid gap-2 border-t pt-4">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="edit-rides" className="text-indigo-700 dark:text-indigo-400 font-semibold">Total Remaining Rides</Label>
+                                        <Badge variant="outline" className="bg-indigo-50/50">Admin Only Override</Badge>
+                                    </div>
+                                    <Input
+                                        id="edit-rides"
+                                        type="number"
+                                        value={formData.total_remaining_rides}
+                                        onChange={(e) => setFormData({ ...formData, total_remaining_rides: parseInt(e.target.value) || 0 })}
+                                        className="border-indigo-200 focus-visible:ring-indigo-500"
+                                    />
+                                    <p className="text-muted-foreground text-xs italic">
+                                        Manually adjust the available ride credits for this company.
+                                    </p>
                                 </div>
                             </div>
                             <DialogFooter>

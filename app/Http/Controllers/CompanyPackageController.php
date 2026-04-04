@@ -117,10 +117,16 @@ class CompanyPackageController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'success' => false,
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to process purchase: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()->withErrors([
                 'message' => 'Failed to process purchase: ' . $e->getMessage()
-            ], 500);
+            ]);
         }
     }
 

@@ -34,6 +34,11 @@ export default function CompanyAdminDashboard() {
                 total_rides: number;
                 scheduled_rides: number;
                 completed_rides: number;
+                ride_credits: {
+                    remaining: number;
+                    total_purchased: number;
+                    pending_packages: number;
+                };
             };
             companySetup: {
                 is_complete: boolean;
@@ -164,6 +169,68 @@ export default function CompanyAdminDashboard() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Ride Credit Analysis */}
+                <Card className="border-indigo-100 dark:border-indigo-900/30">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle>Ride Credit Analysis</CardTitle>
+                                <CardDescription>Monitor your company's service credits and usage</CardDescription>
+                            </div>
+                            <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                <Car className="mr-1 h-3 w-3" />
+                                {stats?.ride_credits?.remaining || 0} Rides Left
+                            </Badge>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Overall Usage Efficiency</span>
+                                    <span className="font-medium">
+                                        {Math.round(((stats?.ride_credits?.total_purchased - stats?.ride_credits?.remaining) / (stats?.ride_credits?.total_purchased || 1)) * 100)}%
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+                                    <div 
+                                        className="h-full bg-indigo-500 transition-all" 
+                                        style={{ width: `${Math.min(100, Math.max(0, ((stats?.ride_credits?.total_purchased - stats?.ride_credits?.remaining) / (stats?.ride_credits?.total_purchased || 1)) * 100))}%` }}
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Used {stats?.ride_credits?.total_purchased - stats?.ride_credits?.remaining} of {stats?.ride_credits?.total_purchased} total purchased rides
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col justify-center border-l pl-6 dark:border-neutral-800">
+                                <span className="text-sm text-muted-foreground">Pending Purchases</span>
+                                <div className="mt-1 flex items-baseline gap-2">
+                                    <span className="text-2xl font-bold">{stats?.ride_credits?.pending_packages || 0}</span>
+                                    <span className="text-xs font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded dark:bg-orange-950/30">
+                                        Action required
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">Packages awaiting payment verification</p>
+                            </div>
+
+                            <div className="flex flex-col justify-center border-l pl-6 dark:border-neutral-800">
+                                <span className="text-sm text-muted-foreground">Estimated Run-time</span>
+                                <div className="mt-1 flex items-baseline gap-2">
+                                    <span className="text-2xl font-bold">
+                                        {stats?.completed_rides > 0 
+                                            ? Math.floor(stats?.ride_credits?.remaining / (stats.completed_rides / 30 || 1))
+                                            : 'N/A'
+                                        }
+                                    </span>
+                                    <span className="text-muted-foreground text-sm">Days</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1 text-balance">Based on average daily consumption over 30 days</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Company Details */}
                 <Card>

@@ -307,6 +307,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsCompanyA
                 'address' => $company->address,
                 'latitude' => $company->default_origin_lat,
                 'longitude' => $company->default_origin_lng,
+                'total_remaining_rides' => $company->total_remaining_rides,
             ]
         ]);
     });
