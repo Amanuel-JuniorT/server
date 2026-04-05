@@ -17,10 +17,10 @@ class CompanyPaymentReceiptController extends Controller
     public function store(Request $request, $companyId)
     {
         $validator = Validator::make($request->all(), [
-            'contract_period_start' => 'required|date',
-            'contract_period_end' => 'required|date|after:contract_period_start',
+            'contract_period_start' => 'nullable|date',
+            'contract_period_end' => 'nullable|date|after:contract_period_start',
             'receipt_image_url' => 'required|url',
-            'amount' => 'required|numeric|min:0',
+            'amount' => 'nullable|numeric|min:0',
             'package_purchase_id' => 'nullable|exists:company_package_purchases,id',
         ]);
 
@@ -32,13 +32,32 @@ class CompanyPaymentReceiptController extends Controller
         }
 
         try {
+            $amount = $request->amount;
+            
+            // If amount is missing but package_purchase_id is provided, get it from the purchase record
+            if (!$amount && $request->package_purchase_id) {
+                $purchase = \App\Models\CompanyPackagePurchase::find($request->package_purchase_id);
+                if ($purchase) {
+                    $amount = $purchase->amount_paid;
+                }
+            }
+
+            // Ensure amount is not null finally
+            if (!$amount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The amount field is required when not linked to a purchase.'
+                ], 422);
+            }
+
             $receipt = CompanyPaymentReceipt::create([
                 'company_id' => $companyId,
                 'contract_period_start' => $request->contract_period_start,
                 'contract_period_end' => $request->contract_period_end,
                 'receipt_image_url' => $request->receipt_image_url,
-                'amount' => $request->amount,
+                'amount' => $amount,
                 'status' => 'pending',
+                'submitted_at' => now(),
             ]);
 
             // If this receipt is for a specific package purchase, link it
@@ -46,6 +65,12 @@ class CompanyPaymentReceiptController extends Controller
                 $purchase = \App\Models\CompanyPackagePurchase::find($request->package_purchase_id);
                 if ($purchase && $purchase->company_id == $companyId) {
                     $purchase->update(['company_payment_receipt_id' => $receipt->id]);
+                    
+                    // Also update the purchase status to pending_verification if it was pending_payment
+                    if ($purchase->status === 'pending_payment') {
+                        // We'll keep it as pending_payment until admin verifies, 
+                        // but the UI will now show that a receipt is attached.
+                    }
                 }
             }
 
@@ -53,10 +78,10 @@ class CompanyPaymentReceiptController extends Controller
             try {
                 broadcast(new GlobalAdminNotification("New payment receipt submitted for company ID: {$companyId}", 'payment_receipt', [
                     'company_id' => $companyId,
-                    'amount' => $request->amount,
+                    'amount' => $amount,
                 ]))->toOthers();
             } catch (\Exception $e) {
-                \Log::warning('Failed to broadcast payment receipt notification: ' . $e->getMessage());
+                Log::warning('Failed to broadcast payment receipt notification: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -67,12 +92,13 @@ class CompanyPaymentReceiptController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to submit payment receipt', [
                 'company_id' => $companyId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to submit payment receipt'
+                'message' => 'Failed to submit payment receipt: ' . $e->getMessage()
             ], 500);
         }
     }

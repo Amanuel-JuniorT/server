@@ -2,12 +2,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { SimpleTable as Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { CheckCircle2, CreditCard, History, LayoutDashboard, Loader2, Package, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle2, CreditCard, ExternalLink, FilePlus, FileText, History, LayoutDashboard, Loader2, Package, Receipt, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface RidePackage {
@@ -29,6 +31,18 @@ interface PurchaseHistory {
     created_at: string;
 }
 
+interface PaymentReceipt {
+    id: number;
+    contract_period_start: string | null;
+    contract_period_end: string | null;
+    receipt_image_url: string;
+    amount: number;
+    status: 'pending' | 'verified' | 'rejected';
+    submitted_at: string;
+    verified_at?: string;
+    rejection_reason?: string;
+}
+
 interface Props {
     packages: RidePackage[];
     history: PurchaseHistory[];
@@ -46,10 +60,38 @@ export default function CompanyPackagesPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
 
+    // Receipt related state
+    const [receipts, setReceipts] = useState<PaymentReceipt[]>([]);
+    const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+    const [isSubmittingReceipt, setIsSubmittingReceipt] = useState(false);
+    const [receiptForm, setReceiptForm] = useState({
+        amount: '',
+        receipt_image_url: '',
+        package_purchase_id: null as number | null,
+        contract_period_start: '',
+        contract_period_end: '',
+    });
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Ride Packages', href: `/company-admin/packages` },
     ];
+
+    useEffect(() => {
+        fetchReceipts();
+    }, []);
+
+    const fetchReceipts = async () => {
+        try {
+            const res = await fetch(`/company-admin/api/payment-receipts`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success) setReceipts(data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch receipts:', error);
+        }
+    };
 
     const handlePurchase = () => {
         if (!selectedPackage) return;
@@ -62,13 +104,67 @@ export default function CompanyPackagesPage() {
                 toast.success(`Package purchase initiated! Please upload a bank receipt to activate your rides.`);
                 setIsConfirmOpen(false);
                 setSelectedPackage(null);
-                setActiveTab('history'); // Switch to history to see pending purchase
+                setActiveTab('history');
             },
-            onError: (errs) => {
+            onError: (errs: any) => {
                 toast.error(errs.message || 'Failed to complete purchase');
             },
             onFinish: () => setIsProcessing(false)
         });
+    };
+
+    const handleOpenReceiptDialog = (purchase?: PurchaseHistory) => {
+        if (purchase) {
+            setReceiptForm({
+                amount: purchase.amount_paid.toString(),
+                receipt_image_url: '',
+                package_purchase_id: purchase.id,
+                contract_period_start: '',
+                contract_period_end: '',
+            });
+        } else {
+            setReceiptForm({
+                amount: '',
+                receipt_image_url: '',
+                package_purchase_id: null,
+                contract_period_start: '',
+                contract_period_end: '',
+            });
+        }
+        setIsReceiptDialogOpen(true);
+    };
+
+    const handleSubmitReceipt = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmittingReceipt(true);
+        
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const res = await fetch(`/company-admin/api/payment-receipts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+                body: JSON.stringify(receiptForm),
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                toast.success('Payment receipt submitted successfully!');
+                setIsReceiptDialogOpen(false);
+                fetchReceipts();
+                // Refresh the whole page state since history depends on receipt
+                router.reload({ only: ['history'] });
+            } else {
+                toast.error(data.message || 'Failed to submit receipt');
+            }
+        } catch (error) {
+            toast.error('An error occurred during submission');
+        } finally {
+            setIsSubmittingReceipt(false);
+        }
     };
 
     return (
@@ -96,6 +192,10 @@ export default function CompanyPackagesPage() {
                         <TabsTrigger value="history" className="gap-2">
                             <History className="h-4 w-4" />
                             Billing History
+                        </TabsTrigger>
+                        <TabsTrigger value="receipts" className="gap-2">
+                            <FileText className="h-4 w-4" />
+                            Receipts Log
                         </TabsTrigger>
                     </TabsList>
 
@@ -143,13 +243,11 @@ export default function CompanyPackagesPage() {
                                         4. Rides activated upon verification!
                                     </p>
                                 </div>
-                                <Button variant="outline" className="w-full mt-6" onClick={() => setActiveTab('purchase')}>
-                                    Go to Store
+                                <Button variant="outline" className="w-full mt-6" onClick={() => handleOpenReceiptDialog()}>
+                                    Submit A Receipt
                                 </Button>
                             </Card>
                         </div>
-
-                        {/* Recent Activity Summary could go here */}
                     </TabsContent>
 
                     {/* Purchase Tab */}
@@ -234,7 +332,7 @@ export default function CompanyPackagesPage() {
                                                     <div className="flex flex-col items-end gap-1.5">
                                                         <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full ${
                                                             item.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 
-                                                            item.status === 'pending_payment' ? 'bg-amber-100 text-amber-700 animate-pulse' : 
+                                                            item.status === 'pending_payment' ? 'bg-amber-100 text-amber-700' : 
                                                             'bg-slate-200 text-slate-600'
                                                         }`}>
                                                             {item.status.replace('_', ' ')}
@@ -244,11 +342,14 @@ export default function CompanyPackagesPage() {
                                                                 variant="outline" 
                                                                 size="sm" 
                                                                 className="h-7 text-[10px] px-3 font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-                                                                onClick={() => router.get('/company-admin/payment-receipts', { package_purchase_id: item.id })}
+                                                                onClick={() => handleOpenReceiptDialog(item)}
                                                             >
                                                                 <CreditCard className="mr-1 h-3 w-3" />
                                                                 Pay Now
                                                             </Button>
+                                                        )}
+                                                        {item.company_payment_receipt_id && (
+                                                            <span className="text-[9px] text-slate-400 italic">Receipt attached</span>
                                                         )}
                                                     </div>
                                                 </TableCell>
@@ -260,6 +361,80 @@ export default function CompanyPackagesPage() {
                                                     <div className="flex flex-col items-center justify-center text-slate-400">
                                                         <History className="h-12 w-12 mb-2 opacity-20" />
                                                         <p className="text-sm italic">You haven't made any purchases yet.</p>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Receipts Log Tab */}
+                    <TabsContent value="receipts" className="space-y-6 animate-in slide-in-from-right-2 duration-500">
+                        <div className="flex items-center justify-between">
+                            <div className="flex flex-col space-y-1">
+                                <h2 className="text-2xl font-bold tracking-tight">Receipts Log</h2>
+                                <p className="text-muted-foreground text-sm">Overview of all submitted bank receipts and their status.</p>
+                            </div>
+                            <Button onClick={() => handleOpenReceiptDialog()} className="bg-indigo-600 hover:bg-indigo-700">
+                                <FilePlus className="mr-2 h-4 w-4" />
+                                Submit Receipt
+                            </Button>
+                        </div>
+
+                        <Card className="border-none shadow-sm overflow-hidden">
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader className="bg-slate-50/30">
+                                        <TableRow>
+                                            <TableHead className="font-bold">Submission Date</TableHead>
+                                            <TableHead className="font-bold">Amount</TableHead>
+                                            <TableHead className="font-bold">Period / Note</TableHead>
+                                            <TableHead className="text-right font-bold">Status</TableHead>
+                                            <TableHead className="text-right font-bold">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {receipts && receipts.map((receipt) => (
+                                            <TableRow key={receipt.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <TableCell className="text-sm font-medium">
+                                                    {new Date(receipt.submitted_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                </TableCell>
+                                                <TableCell className="font-black text-slate-900">
+                                                    {receipt.amount} <span className="text-[10px] font-normal text-slate-400">ETB</span>
+                                                </TableCell>
+                                                <TableCell className="text-xs text-slate-500">
+                                                    {receipt.contract_period_start ? (
+                                                        <>Period: {new Date(receipt.contract_period_start).toLocaleDateString()} - {new Date(receipt.contract_period_end || '').toLocaleDateString()}</>
+                                                    ) : (
+                                                        <span className="italic">Ride Package Topup</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full ${
+                                                        receipt.status === 'verified' ? 'bg-emerald-100 text-emerald-700' : 
+                                                        receipt.status === 'pending' ? 'bg-amber-100 text-amber-700' : 
+                                                        'bg-rose-100 text-rose-700'
+                                                    }`}>
+                                                        {receipt.status}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <a href={receipt.receipt_image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-indigo-600 hover:text-indigo-800 text-xs font-bold">
+                                                        <ExternalLink className="mr-1 h-3 w-3" />
+                                                        View
+                                                    </a>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {(!receipts || receipts.length === 0) && (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center py-12">
+                                                    <div className="flex flex-col items-center justify-center text-slate-400">
+                                                        <FileText className="h-12 w-12 mb-2 opacity-20" />
+                                                        <p className="text-sm italic">No receipts submitted yet.</p>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -312,11 +487,81 @@ export default function CompanyPackagesPage() {
                                     Go Back
                                 </Button>
                             </div>
-                            
-                            <p className="text-[10px] text-center text-slate-400 mt-4 px-4 leading-relaxed">
-                                By clicking confirm, you agree to generate a purchase request. Rides will be added to your balance once the bank receipt is verified by our team.
-                            </p>
                         </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Submit Receipt Dialog */}
+                <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+                    <DialogContent className="sm:max-w-[450px]">
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-bold">Submit Payment Receipt</DialogTitle>
+                            <DialogDescription>
+                                Upload your bank transfer or deposit receipt for verification.
+                            </DialogDescription>
+                        </DialogHeader>
+                        
+                        <form onSubmit={handleSubmitReceipt} className="space-y-4 py-4">
+                            <div className="grid gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="amount">Amount (ETB)</Label>
+                                    <Input
+                                        id="amount"
+                                        type="number"
+                                        value={receiptForm.amount}
+                                        onChange={(e) => setReceiptForm({ ...receiptForm, amount: e.target.value })}
+                                        placeholder="0.00"
+                                        required
+                                        disabled={!!receiptForm.package_purchase_id}
+                                    />
+                                    {receiptForm.package_purchase_id && (
+                                        <p className="text-[10px] text-slate-500 italic">Amount fixed for selected package.</p>
+                                    )}
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="receipt_image_url">Receipt File URL</Label>
+                                    <Input
+                                        id="receipt_image_url"
+                                        type="url"
+                                        value={receiptForm.receipt_image_url}
+                                        onChange={(e) => setReceiptForm({ ...receiptForm, receipt_image_url: e.target.value })}
+                                        placeholder="https://link-to-your-receipt-image.jpg"
+                                        required
+                                    />
+                                    <p className="text-[10px] text-slate-400">
+                                        Please provide a public link to your deposit slip (e.g., from Google Drive, Dropbox, or a screenshot host).
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="contract_period_start" className="text-xs">Period Start (Optional)</Label>
+                                        <Input
+                                            id="contract_period_start"
+                                            type="date"
+                                            value={receiptForm.contract_period_start}
+                                            onChange={(e) => setReceiptForm({ ...receiptForm, contract_period_start: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="contract_period_end" className="text-xs">Period End (Optional)</Label>
+                                        <Input
+                                            id="contract_period_end"
+                                            type="date"
+                                            value={receiptForm.contract_period_end}
+                                            onChange={(e) => setReceiptForm({ ...receiptForm, contract_period_end: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <DialogFooter className="mt-6">
+                                <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12" disabled={isSubmittingReceipt}>
+                                    {isSubmittingReceipt ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit for Verification"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
                     </DialogContent>
                 </Dialog>
             </div>
