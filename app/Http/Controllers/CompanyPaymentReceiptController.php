@@ -19,7 +19,8 @@ class CompanyPaymentReceiptController extends Controller
         $validator = Validator::make($request->all(), [
             'contract_period_start' => 'nullable|date',
             'contract_period_end' => 'nullable|date|after:contract_period_start',
-            'receipt_image_url' => 'required|url',
+            'receipt_image_url' => 'nullable|url',
+            'receipt_file' => 'nullable|image|max:10240', // 10MB max
             'amount' => 'nullable|numeric|min:0',
             'package_purchase_id' => 'nullable|exists:company_package_purchases,id',
         ]);
@@ -50,11 +51,36 @@ class CompanyPaymentReceiptController extends Controller
                 ], 422);
             }
 
+            $receiptPath = null;
+            $imageUrl = $request->receipt_image_url;
+
+            // Handle file upload if provided
+            if ($request->hasFile('receipt_file')) {
+                $file = $request->file('receipt_file');
+                $timestamp = time();
+                $filename = $timestamp . '_' . $file->getClientOriginalName();
+                $receiptPath = $file->storeAs('receipts/' . $companyId, $filename, 'public');
+                $imageUrl = \Illuminate\Support\Facades\Storage::url($receiptPath);
+            }
+
+            // If no file but URL is provided (manual input), set receipt_path to the URL or a placeholder
+            if (!$receiptPath && $imageUrl) {
+                $receiptPath = $imageUrl; // DB requires it, use URL if no file
+            }
+
+            if (!$receiptPath) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please provide either a receipt image file or a receipt URL.'
+                ], 422);
+            }
+
             $receipt = CompanyPaymentReceipt::create([
                 'company_id' => $companyId,
                 'contract_period_start' => $request->contract_period_start,
                 'contract_period_end' => $request->contract_period_end,
-                'receipt_image_url' => $request->receipt_image_url,
+                'receipt_path' => $receiptPath,
+                'receipt_image_url' => $imageUrl,
                 'amount' => $amount,
                 'status' => 'pending',
                 'submitted_at' => now(),

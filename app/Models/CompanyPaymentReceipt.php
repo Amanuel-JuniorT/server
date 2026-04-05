@@ -12,6 +12,7 @@ class CompanyPaymentReceipt extends Model
         'contract_period_start',
         'contract_period_end',
         'receipt_image_url',
+        'receipt_path',
         'amount',
         'status',
         'submitted_at',

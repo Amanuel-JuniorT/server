@@ -8,8 +8,8 @@ import { SimpleTable as Table, TableBody, TableCell, TableHead, TableHeader, Tab
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { CheckCircle2, CreditCard, ExternalLink, FilePlus, FileText, History, LayoutDashboard, Loader2, Package, Receipt, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { CheckCircle2, CreditCard, ExternalLink, FilePlus, FileText, History, LayoutDashboard, Loader2, Package, Receipt, Sparkles, Upload, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface RidePackage {
@@ -64,9 +64,12 @@ export default function CompanyPackagesPage() {
     const [receipts, setReceipts] = useState<PaymentReceipt[]>([]);
     const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
     const [isSubmittingReceipt, setIsSubmittingReceipt] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [filePreview, setFilePreview] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    
     const [receiptForm, setReceiptForm] = useState({
         amount: '',
-        receipt_image_url: '',
         package_purchase_id: null as number | null,
         contract_period_start: '',
         contract_period_end: '',
@@ -114,10 +117,11 @@ export default function CompanyPackagesPage() {
     };
 
     const handleOpenReceiptDialog = (purchase?: PurchaseHistory) => {
+        setSelectedFile(null);
+        setFilePreview(null);
         if (purchase) {
             setReceiptForm({
                 amount: purchase.amount_paid.toString(),
-                receipt_image_url: '',
                 package_purchase_id: purchase.id,
                 contract_period_start: '',
                 contract_period_end: '',
@@ -125,7 +129,6 @@ export default function CompanyPackagesPage() {
         } else {
             setReceiptForm({
                 amount: '',
-                receipt_image_url: '',
                 package_purchase_id: null,
                 contract_period_start: '',
                 contract_period_end: '',
@@ -134,19 +137,62 @@ export default function CompanyPackagesPage() {
         setIsReceiptDialogOpen(true);
     };
 
+    const handleFileChange = (file: File) => {
+        if (file && file.type.startsWith('image/')) {
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFilePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            toast.error('Please select a valid image file');
+        }
+    };
+
+    const onDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    }, []);
+
+    const onDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    }, []);
+
+    const onDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileChange(file);
+    }, []);
+
     const handleSubmitReceipt = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!selectedFile) {
+            toast.error('Please attach a receipt image');
+            return;
+        }
+
         setIsSubmittingReceipt(true);
         
         try {
+            const formData = new FormData();
+            formData.append('receipt_file', selectedFile);
+            formData.append('amount', receiptForm.amount);
+            if (receiptForm.package_purchase_id) {
+                formData.append('package_purchase_id', receiptForm.package_purchase_id.toString());
+            }
+            formData.append('contract_period_start', receiptForm.contract_period_start);
+            formData.append('contract_period_end', receiptForm.contract_period_end);
+
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const res = await fetch(`/company-admin/api/payment-receipts`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken || '',
                 },
-                body: JSON.stringify(receiptForm),
+                body: formData,
             });
 
             const data = await res.json();
@@ -155,7 +201,6 @@ export default function CompanyPackagesPage() {
                 toast.success('Payment receipt submitted successfully!');
                 setIsReceiptDialogOpen(false);
                 fetchReceipts();
-                // Refresh the whole page state since history depends on receipt
                 router.reload({ only: ['history'] });
             } else {
                 toast.error(data.message || 'Failed to submit receipt');
@@ -493,72 +538,122 @@ export default function CompanyPackagesPage() {
 
                 {/* Submit Receipt Dialog */}
                 <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-                    <DialogContent className="sm:max-w-[450px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-2xl font-bold">Submit Payment Receipt</DialogTitle>
-                            <DialogDescription>
-                                Upload your bank transfer or deposit receipt for verification.
-                            </DialogDescription>
-                        </DialogHeader>
+                    <DialogContent className="sm:max-w-[500px] border-none shadow-2xl p-0 overflow-hidden">
+                        <div className="bg-slate-900 p-6 text-white">
+                            <DialogHeader>
+                                <DialogTitle className="text-2xl font-black tracking-tight">Submit Payment Receipt</DialogTitle>
+                                <DialogDescription className="text-slate-400">
+                                    Attach your bank transfer confirmation to activate your credits.
+                                </DialogDescription>
+                            </DialogHeader>
+                        </div>
                         
-                        <form onSubmit={handleSubmitReceipt} className="space-y-4 py-4">
-                            <div className="grid gap-4">
+                        <form onSubmit={handleSubmitReceipt} className="p-6 space-y-6">
+                            <div className="grid gap-6">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="amount">Amount (ETB)</Label>
-                                    <Input
-                                        id="amount"
-                                        type="number"
-                                        value={receiptForm.amount}
-                                        onChange={(e) => setReceiptForm({ ...receiptForm, amount: e.target.value })}
-                                        placeholder="0.00"
-                                        required
-                                        disabled={!!receiptForm.package_purchase_id}
-                                    />
-                                    {receiptForm.package_purchase_id && (
-                                        <p className="text-[10px] text-slate-500 italic">Amount fixed for selected package.</p>
-                                    )}
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label htmlFor="receipt_image_url">Receipt File URL</Label>
-                                    <Input
-                                        id="receipt_image_url"
-                                        type="url"
-                                        value={receiptForm.receipt_image_url}
-                                        onChange={(e) => setReceiptForm({ ...receiptForm, receipt_image_url: e.target.value })}
-                                        placeholder="https://link-to-your-receipt-image.jpg"
-                                        required
-                                    />
-                                    <p className="text-[10px] text-slate-400">
-                                        Please provide a public link to your deposit slip (e.g., from Google Drive, Dropbox, or a screenshot host).
-                                    </p>
+                                    <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Receipt Attachment</Label>
+                                    <div 
+                                        onDragOver={onDragOver}
+                                        onDragLeave={onDragLeave}
+                                        onDrop={onDrop}
+                                        className={`relative group cursor-pointer transition-all duration-300 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-4 overflow-hidden min-h-[180px]
+                                            ${isDragging ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
+                                    >
+                                        {filePreview ? (
+                                            <div className="relative w-full h-full p-2 group">
+                                                <img src={filePreview} alt="Preview" className="w-full h-40 object-cover rounded-xl shadow-sm" />
+                                                <div className="absolute inset-2 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center backdrop-blur-[2px]">
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="destructive" 
+                                                        size="sm" 
+                                                        className="h-8 rounded-full"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedFile(null);
+                                                            setFilePreview(null);
+                                                        }}
+                                                    >
+                                                        <X className="h-4 w-4 mr-1" /> Remove
+                                                    </Button>
+                                                </div>
+                                                <div className="absolute bottom-4 left-4 right-4 text-center">
+                                                    <p className="text-[10px] font-bold text-white truncate drop-shadow-md">{selectedFile?.name}</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className={`h-14 w-14 rounded-full flex items-center justify-center transition-transform duration-300 ${isDragging ? 'scale-110 bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                    <Upload className="h-7 w-7" />
+                                                </div>
+                                                <div className="text-center px-4">
+                                                    <p className="text-sm font-bold text-slate-900">Drag & drop your receipt here</p>
+                                                    <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-medium">Or click to browse files</p>
+                                                </div>
+                                                <Input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="absolute inset-0 opacity-0 cursor-pointer" 
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleFileChange(file);
+                                                    }}
+                                                />
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="contract_period_start" className="text-xs">Period Start (Optional)</Label>
-                                        <Input
-                                            id="contract_period_start"
-                                            type="date"
-                                            value={receiptForm.contract_period_start}
-                                            onChange={(e) => setReceiptForm({ ...receiptForm, contract_period_start: e.target.value })}
-                                        />
+                                        <Label htmlFor="amount" className="text-xs font-bold uppercase tracking-widest text-slate-500">Amount (ETB)</Label>
+                                        <div className="relative">
+                                            <Input
+                                                id="amount"
+                                                type="number"
+                                                className="pl-8 font-black text-slate-900 border-2"
+                                                value={receiptForm.amount}
+                                                onChange={(e) => setReceiptForm({ ...receiptForm, amount: e.target.value })}
+                                                placeholder="0.00"
+                                                required
+                                                disabled={!!receiptForm.package_purchase_id}
+                                            />
+                                            <CreditCard className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                        </div>
                                     </div>
+                                    
                                     <div className="grid gap-2">
-                                        <Label htmlFor="contract_period_end" className="text-xs">Period End (Optional)</Label>
-                                        <Input
-                                            id="contract_period_end"
-                                            type="date"
-                                            value={receiptForm.contract_period_end}
-                                            onChange={(e) => setReceiptForm({ ...receiptForm, contract_period_end: e.target.value })}
-                                        />
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Status</Label>
+                                        <div className="flex items-center h-10 px-3 bg-slate-50 rounded-lg border-2 border-slate-100">
+                                            <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse mr-2" />
+                                            <span className="text-[10px] font-black text-slate-600 uppercase">Pending Review</span>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                    <p className="text-[10px] text-indigo-700 leading-relaxed font-medium italic">
+                                        * Please ensure the transaction ID and amount are clearly visible in the image. Our team typically verifies receipts within 30-60 minutes.
+                                    </p>
                                 </div>
                             </div>
 
-                            <DialogFooter className="mt-6">
-                                <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12" disabled={isSubmittingReceipt}>
-                                    {isSubmittingReceipt ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit for Verification"}
+                            <DialogFooter className="mt-4 pt-4 border-t gap-2 sm:gap-0">
+                                <Button 
+                                    variant="ghost" 
+                                    type="button" 
+                                    className="font-bold text-slate-500" 
+                                    onClick={() => setIsReceiptDialogOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    type="submit" 
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-6 h-auto shadow-lg shadow-indigo-100" 
+                                    disabled={isSubmittingReceipt}
+                                >
+                                    {isSubmittingReceipt ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <FilePlus className="h-5 w-5 mr-2" />}
+                                    Submit Receipt
                                 </Button>
                             </DialogFooter>
                         </form>
