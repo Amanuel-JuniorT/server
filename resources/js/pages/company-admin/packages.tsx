@@ -588,8 +588,11 @@ export default function CompanyPackagesPage() {
                                                 </div>
                                                 <div className="text-center px-4">
                                                     <p className="text-sm font-bold text-slate-900">Drag & drop your receipt here</p>
-                                                    <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-medium">Or click to browse files</p>
+                                                    <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-medium">Or click below to browse</p>
                                                 </div>
+                                                <Button type="button" variant="outline" size="sm" className="mt-2 relative z-10 font-bold bg-white">
+                                                    Choose File
+                                                </Button>
                                                 <Input 
                                                     type="file" 
                                                     accept="image/*" 

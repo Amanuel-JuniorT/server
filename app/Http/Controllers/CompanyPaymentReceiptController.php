@@ -59,7 +59,8 @@ class CompanyPaymentReceiptController extends Controller
                 $file = $request->file('receipt_file');
                 $timestamp = time();
                 $filename = $timestamp . '_' . $file->getClientOriginalName();
-                $receiptPath = $file->storeAs('receipts/' . $companyId, $filename, 'public');
+                // Omit Disk to use Default filesystem (Supabase on prod, local elsewhere)
+                $receiptPath = $file->storeAs('receipts/' . $companyId, $filename);
                 $imageUrl = \Illuminate\Support\Facades\Storage::url($receiptPath);
             }
 
