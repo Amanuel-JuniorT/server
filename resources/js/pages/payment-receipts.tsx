@@ -52,6 +52,7 @@ export default function PaymentReceiptsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'company' | 'wallet'>('company');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [companyStatusFilter, setCompanyStatusFilter] = useState<string>('pending');
     const [selectedReceipt, setSelectedReceipt] = useState<PaymentReceipt | null>(null);
     const [selectedTopup, setSelectedTopup] = useState<PendingTopup | null>(null);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -68,12 +69,12 @@ export default function PaymentReceiptsPage() {
         } else {
             fetchPendingTopups();
         }
-    }, [activeTab, statusFilter]);
+    }, [activeTab, statusFilter, companyStatusFilter]);
 
     const fetchPendingReceipts = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/admin/payment-receipts/pending');
+            const res = await fetch(`/admin/payment-receipts/pending?status=${companyStatusFilter}`);
             const data = await res.json();
             if (data.success) {
                 setReceipts(data.data);
@@ -288,8 +289,25 @@ export default function PaymentReceiptsPage() {
                             )}
                         </button>
                     </div>
-
-                    {activeTab === 'wallet' && (
+ 
+                    {activeTab === 'company' ? (
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="company-status-filter" className="text-sm">
+                                Status:
+                            </Label>
+                            <select
+                                id="company-status-filter"
+                                className="border-input bg-background focus-visible:ring-ring h-9 w-[150px] rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                                value={companyStatusFilter}
+                                onChange={(e) => setCompanyStatusFilter(e.target.value)}
+                            >
+                                <option value="all">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="verified">Verified</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                    ) : (
                         <div className="flex items-center gap-2">
                             <Label htmlFor="status-filter" className="text-sm">
                                 Status:
@@ -364,27 +382,41 @@ export default function PaymentReceiptsPage() {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex items-center justify-end gap-2">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="default"
-                                                                onClick={() => handleVerify(receipt.id)}
-                                                                disabled={isProcessing}
-                                                            >
-                                                                <Check className="mr-1 h-4 w-4" />
-                                                                Verify
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="destructive"
-                                                                onClick={() => {
-                                                                    setSelectedReceipt(receipt);
-                                                                    setIsRejectDialogOpen(true);
-                                                                }}
-                                                                disabled={isProcessing}
-                                                            >
-                                                                <X className="mr-1 h-4 w-4" />
-                                                                Reject
-                                                            </Button>
+                                                            {receipt.status === 'pending' ? (
+                                                                <>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="default"
+                                                                        onClick={() => handleVerify(receipt.id)}
+                                                                        disabled={isProcessing}
+                                                                    >
+                                                                        <Check className="mr-1 h-4 w-4" />
+                                                                        Verify
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="destructive"
+                                                                        onClick={() => {
+                                                                            setSelectedReceipt(receipt);
+                                                                            setIsRejectDialogOpen(true);
+                                                                        }}
+                                                                        disabled={isProcessing}
+                                                                    >
+                                                                        <X className="mr-1 h-4 w-4" />
+                                                                        Reject
+                                                                    </Button>
+                                                                </>
+                                                            ) : (
+                                                                <span
+                                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                                        receipt.status === 'verified'
+                                                                            ? 'bg-green-100 text-green-800'
+                                                                            : 'bg-red-100 text-red-800'
+                                                                    }`}
+                                                                >
+                                                                    {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>

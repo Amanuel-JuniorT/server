@@ -156,13 +156,19 @@ class CompanyPaymentReceiptController extends Controller
     /**
      * Get all pending receipts (Super Admin)
      */
-    public function getPending()
+    public function getPending(Request $request)
     {
         try {
-            $receipts = CompanyPaymentReceipt::where('status', 'pending')
-                ->with(['company', 'verifiedBy'])
-                ->orderBy('submitted_at', 'asc')
-                ->get();
+            $status = $request->query('status', 'pending');
+            
+            $query = CompanyPaymentReceipt::with(['company', 'verifiedBy'])
+                ->orderBy('submitted_at', 'desc');
+
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+
+            $receipts = $query->get();
 
             return response()->json([
                 'success' => true,
@@ -214,6 +220,9 @@ class CompanyPaymentReceiptController extends Controller
                 }
             }
 
+            // Broadcast the update for real-time UI refresh
+            event(new \App\Events\CompanyPaymentReceiptUpdated($receipt, 'Your payment has been verified successfully.'));
+
             AuditService::high('Company Receipt Verified', $receipt, "Verified receipt of {$receipt->amount} ETB for company: {$receipt->company->name}");
 
             return response()->json([
@@ -261,6 +270,9 @@ class CompanyPaymentReceiptController extends Controller
             }
 
             $receipt->reject($request->user()->id, $request->rejection_reason);
+
+            // Broadcast the rejection for real-time UI refresh
+            event(new \App\Events\CompanyPaymentReceiptUpdated($receipt, 'Your payment has been rejected. Reason: ' . $request->rejection_reason));
 
             AuditService::high('Company Receipt Rejected', $receipt, "Rejected receipt of {$receipt->amount} ETB for company: {$receipt->company->name}. Reason: {$request->rejection_reason}");
 

@@ -82,7 +82,31 @@ export default function CompanyPackagesPage() {
 
     useEffect(() => {
         fetchReceipts();
-    }, []);
+
+        // Listen for real-time payment updates
+        // @ts-ignore
+        const echo = (window as any).Echo;
+        if (echo && company?.id) {
+            const channel = echo.private(`company.${company.id}`);
+            
+            channel.listen('.company_payment_receipt.updated', (data: any) => {
+                console.log('Payment Receipt Updated:', data);
+                if (data.status === 'verified') {
+                    toast.success(data.message || 'Payment verified! Your package is now active.');
+                } else if (data.status === 'rejected') {
+                    toast.error(data.message || 'Payment receipt was rejected.');
+                }
+                
+                // Refresh data
+                fetchReceipts();
+                router.reload({ only: ['company', 'history'] });
+            });
+
+            return () => {
+                echo.leave(`company.${company.id}`);
+            };
+        }
+    }, [company?.id]);
 
     const fetchReceipts = async () => {
         try {
