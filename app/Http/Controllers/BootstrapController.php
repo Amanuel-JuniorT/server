@@ -124,17 +124,28 @@ class BootstrapController extends Controller
                 $upcomingInstance = \App\Models\CompanyGroupRideInstance::whereIn('ride_group_id', $memberRecords)
                     ->where('scheduled_time', '>=', now())
                     ->whereIn('status', ['requested', 'accepted', 'in_progress', 'arrived'])
-                    ->with(['driver'])
+                    ->with(['driver.user', 'rideGroup'])
                     ->orderBy('scheduled_time', 'asc')
                     ->first();
 
                 if ($upcomingInstance) {
                     $companyRideData = [
-                        'status' => strtoupper($upcomingInstance->status),
+                        'id' => $upcomingInstance->id,
                         'ride_id' => $upcomingInstance->id,
                         'company_id' => $upcomingInstance->company_id,
+                        'route_name' => $upcomingInstance->rideGroup->group_name ?? 'Company Ride',
+                        'pickup_address' => $upcomingInstance->pickup_address,
+                        'destination_address' => $upcomingInstance->destination_address,
+                        'scheduled_time' => $upcomingInstance->scheduled_time->toIso8601String(),
+                        'status' => strtolower($upcomingInstance->status),
                         'driver_id' => $upcomingInstance->driver_id,
-                        'scheduled_time' => $upcomingInstance->scheduled_time->toIso8601String()
+                        'driver' => $upcomingInstance->driver ? [
+                             'id' => $upcomingInstance->driver->id,
+                             'user' => [
+                                 'name' => $upcomingInstance->driver->user->name ?? 'Unknown',
+                                 'phone' => $upcomingInstance->driver->user->phone ?? null,
+                             ]
+                        ] : null
                     ];
                 }
             }
