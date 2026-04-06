@@ -110,7 +110,38 @@ class BootstrapController extends Controller
       }
     }
 
-    // 4. App Config
+    // 4. Company Ride Status (for passengers)
+    $companyRideData = null;
+    if ($user && $user->role === 'passenger') {
+        $employee = \App\Models\CompanyEmployee::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->first();
+
+        if ($employee) {
+            $memberRecords = \App\Models\CompanyRideGroupMember::where('employee_id', $employee->id)->pluck('ride_group_id');
+
+            if ($memberRecords->isNotEmpty()) {
+                $upcomingInstance = \App\Models\CompanyGroupRideInstance::whereIn('ride_group_id', $memberRecords)
+                    ->where('scheduled_time', '>=', now())
+                    ->whereIn('status', ['requested', 'accepted', 'in_progress', 'arrived'])
+                    ->with(['driver'])
+                    ->orderBy('scheduled_time', 'asc')
+                    ->first();
+
+                if ($upcomingInstance) {
+                    $companyRideData = [
+                        'status' => strtoupper($upcomingInstance->status),
+                        'ride_id' => $upcomingInstance->id,
+                        'company_id' => $upcomingInstance->company_id,
+                        'driver_id' => $upcomingInstance->driver_id,
+                        'scheduled_time' => $upcomingInstance->scheduled_time->toIso8601String()
+                    ];
+                }
+            }
+        }
+    }
+
+    // 5. App Config
     $configData = [
       'min_app_version' => '1.0.0', // Read from config/app.php or DB
       'maintenance' => false,
@@ -128,6 +159,7 @@ class BootstrapController extends Controller
       'user' => $userData,
       'auth' => $authData,
       'ride' => $rideData,
+      'company_ride' => $companyRideData,
       'config' => $configData,
     ]);
   }

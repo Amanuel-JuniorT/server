@@ -129,8 +129,22 @@ class EmployeeRideController extends Controller
             'company_name' => $instance->company->name ?? 'Unknown Company',
             'fellow_passengers' => $instance->rideGroup->members
               ->where('employee_id', '!=', $member->employee_id)
-              ->map(function ($m) {
-                return $m->employee->name ?? 'Unknown';
+              ->map(function ($m) use ($instance) {
+                // Ensure array for safely checking (whether Eloquent cast or raw JSON string from stdClass)
+                $aboard = is_string($instance->aboard_employees) ? json_decode($instance->aboard_employees, true) : ($instance->aboard_employees ?? []);
+                $optedOut = is_string($instance->opted_out_employees) ? json_decode($instance->opted_out_employees, true) : ($instance->opted_out_employees ?? []);
+
+                $status = 'waiting';
+                if (is_array($aboard) && in_array($m->employee_id, $aboard)) {
+                    $status = 'aboard';
+                } else if (is_array($optedOut) && in_array($m->employee_id, $optedOut)) {
+                    $status = 'opted_out';
+                }
+
+                return [
+                    'name' => $m->employee->name ?? 'Unknown',
+                    'status' => $status
+                ];
               })->values()->toArray(),
           ];
         } else {
@@ -184,7 +198,6 @@ class EmployeeRideController extends Controller
             'start_date' => $group->start_date,
             'end_date' => $group->end_date,
             'status' => 'scheduled',
-            'status' => 'scheduled',
             'driver' => $fallbackDriver,
             'driver_name' => $fallbackDriver['user']['name'] ?? null,
             'driver_phone' => $fallbackDriver['user']['phone'] ?? null,
@@ -193,7 +206,10 @@ class EmployeeRideController extends Controller
             'fellow_passengers' => $group->members
               ->where('employee_id', '!=', $member->employee_id)
               ->map(function ($m) {
-                return $m->employee->name ?? 'Unknown';
+                return [
+                    'name' => $m->employee->name ?? 'Unknown',
+                    'status' => 'waiting' // By default, everyone is waiting if it hasn't started
+                ];
               })->values()->toArray(),
           ];
         }
