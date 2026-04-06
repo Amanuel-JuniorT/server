@@ -33,6 +33,7 @@ class CompanyRideRemindersCommand extends Command
     public function handle(UnifiedNotificationService $notificationService, RoutingService $routingService)
     {
         $now = now();
+        Log::info("[CompanyRemind] Command started at {$now->toDateTimeString()}");
         
         // Find active ride instances for today
         $instances = CompanyGroupRideInstance::whereDate('scheduled_time', $now->toDateString())
@@ -40,32 +41,41 @@ class CompanyRideRemindersCommand extends Command
             ->with(['rideGroup', 'driver', 'employee'])
             ->get();
 
+        Log::info("[CompanyRemind] Found " . $instances->count() . " active instances for today.");
+
         foreach ($instances as $instance) {
             $scheduledTime = $instance->scheduled_time;
             $diffInMinutes = $now->diffInMinutes($scheduledTime, false);
 
-            // 1. 2-Hour Reminder (120 - 110 minutes before)
+            Log::info("[CompanyRemind] Processing Instance #{$instance->id} | Scheduled: {$scheduledTime->format('H:i:s')} | Diff: {$diffInMinutes} mins");
+
+            // 1. 2-Hour Reminder
             if ($diffInMinutes <= 120 && $diffInMinutes > 110 && !$instance->reminder_2h_sent) {
+                Log::info("[CompanyRemind] Triggering 2h reminder for Instance #{$instance->id}");
                 $this->sendReminder($instance, $notificationService, '2h');
                 $instance->update(['reminder_2h_sent' => true]);
             }
 
-            // 2. 1-Hour Reminder (60 - 50 minutes before)
+            // 2. 1-Hour Reminder
             if ($diffInMinutes <= 60 && $diffInMinutes > 50 && !$instance->reminder_1h_sent) {
+                Log::info("[CompanyRemind] Triggering 1h reminder for Instance #{$instance->id}");
                 $this->sendReminder($instance, $notificationService, '1h');
                 $instance->update(['reminder_1h_sent' => true]);
             }
 
-            // 3. "Go Now" Alert (Logic based on travel time)
+            // 3. "Go Now" Alert
             if ($diffInMinutes <= 45 && $diffInMinutes > 0 && !$instance->reminder_go_sent && $instance->driver_id) {
+                Log::info("[CompanyRemind] Checking 'Go Now' for Instance #{$instance->id}");
                 $this->handleGoNowAlert($instance, $notificationService, $routingService);
             }
 
-            // 4. Time Arrived (Scheduled Time)
+            // 4. Time Arrived
             if ($diffInMinutes <= 1 && $diffInMinutes >= -2 && $instance->status === 'accepted') {
+                Log::info("[CompanyRemind] Triggering 'Time Arrived' for Instance #{$instance->id}");
                 $this->handleTimeArrived($instance, $notificationService, $routingService);
             }
         }
+        Log::info("[CompanyRemind] Command finished.");
     }
 
     private function sendReminder(CompanyGroupRideInstance $instance, UnifiedNotificationService $service, string $type)
@@ -85,6 +95,7 @@ class CompanyRideRemindersCommand extends Command
 
         // Notify Employees (Members of the group)
         $members = $instance->rideGroup->members()->with('employee')->get();
+        Log::info("[CompanyRemind] Notifying " . $members->count() . " members for Instance #{$instance->id}");
         foreach ($members as $member) {
             if (!$instance->isEmployeeOptedOut($member->employee_id)) {
                 $service->notifyUser($member->employee_id, $title, $body, [
@@ -92,6 +103,8 @@ class CompanyRideRemindersCommand extends Command
                     'ride_instance_id' => $instance->id,
                     'reminder_type' => $type
                 ], null, 'Passenger');
+            } else {
+                Log::info("[CompanyRemind] Member {$member->employee_id} opted out, skipping.");
             }
         }
     }
@@ -116,7 +129,10 @@ class CompanyRideRemindersCommand extends Command
         $buffer = 5; // 5 minutes buffer
         $timeUntilStart = now()->diffInMinutes($instance->scheduled_time, false);
 
+        Log::info("[CompanyRemind] Instance #{$instance->id} Go Now logic: Travel Time = {$travelTime}, Time Until Start = {$timeUntilStart} mins, Current Buffer = {$buffer}");
+
         if ($timeUntilStart <= ($travelTime + $buffer)) {
+            Log::info("[CompanyRemind] THRESHOLD MET: Sending Go Now to Driver for Instance #{$instance->id}");
             $service->notifyUser($instance->driver->user_id, "Time to Go!", "Start moving now to reach your first pickup on time. Estimated travel: {$travelTime} mins.", [
                 'type' => 'company_ride_go_now',
                 'ride_instance_id' => $instance->id,
@@ -124,6 +140,8 @@ class CompanyRideRemindersCommand extends Command
             ], null, 'Driver');
 
             $instance->update(['reminder_go_sent' => true]);
+        } else {
+            Log::info("[CompanyRemind] Go Now not yet: Time Until Start ({$timeUntilStart}) > (Travel Time {$travelTime} + Buffer {$buffer})");
         }
     }
 
@@ -142,9 +160,11 @@ class CompanyRideRemindersCommand extends Command
         }, $optimizedOrder);
 
         // Broadcast event for the driver app to show bottom sheet
+        Log::info("[CompanyRemind] Broadcasting Arrival for Instance #{$instance->id} with " . count($orderData) . " stops.");
         broadcast(new CompanyRideArrived($instance, $orderData));
 
         // FCM for good measure
+        Log::info("[CompanyRemind] Sending Arrival FCM to Driver for Instance #{$instance->id}");
         $service->notifyUser($instance->driver->user_id, "Ride Time Arrived", "Your company ride starts now. View the picking order in the app.", [
             'type' => 'company_ride_arrived',
             'ride_instance_id' => $instance->id,
