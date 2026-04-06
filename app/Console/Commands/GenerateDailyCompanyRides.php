@@ -17,7 +17,7 @@ class GenerateDailyCompanyRides extends Command
 
         $this->info("Generating rides for {$dayAbbr} ({$today->toDateString()})...");
 
-        $assignments = \App\Models\CompanyRideGroupAssignment::whereIn('status', ['accepted', 'active'])
+        $assignments = \App\Models\CompanyRideGroupAssignment::whereIn('status', ['pending', 'accepted', 'active'])
             ->where('start_date', '<=', $today)
             ->where('end_date', '>=', $today)
             ->with(['rideGroup.members'])
@@ -30,6 +30,7 @@ class GenerateDailyCompanyRides extends Command
             $group = $assignment->rideGroup;
 
             if (!$group || $group->status !== 'active') {
+                $this->warn("Skipping assignment {$assignment->id}: Group is null or not active.");
                 continue;
             }
 
@@ -50,6 +51,7 @@ class GenerateDailyCompanyRides extends Command
 
             // Use the group's active_days via model helper (falls back to Mon-Fri)
             if (!$group->isScheduledForDay($dayAbbr)) {
+                $this->line("Group '{$group->group_name}' is not scheduled for today ({$dayAbbr}).");
                 continue;
             }
 
@@ -68,7 +70,7 @@ class GenerateDailyCompanyRides extends Command
 
             // Consume one ride from the package for this group trip
             if (!$company->consumeRide()) {
-                $this->error("Failed to consume ride for company '{$company->name}'.");
+                $this->error("Failed to consume ride for company '{$company->name}' (Group: {$group->group_name}). Check package status.");
                 continue;
             }
 
