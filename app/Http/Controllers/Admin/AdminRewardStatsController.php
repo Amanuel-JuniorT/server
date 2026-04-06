@@ -16,7 +16,7 @@ class AdminRewardStatsController extends Controller
 {
     public function index(Request $request)
     {
-        $timeRange = $request->get('range', '30'); // Default 30 days
+        $timeRange = $request->query('range', '30'); // Default 30 days
         $startDate = Carbon::now()->subDays((int)$timeRange);
 
         // 1. High-Level Summary Stats
@@ -57,7 +57,7 @@ class AdminRewardStatsController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'count' => $user->user_promotions_count,
-                    'profile_picture' => $user->profile_image ? \Storage::url($user->profile_image) : null
+                    'profile_picture' => $user->profile_image ? Storage::url($user->profile_image) : null
                 ];
             });
 
