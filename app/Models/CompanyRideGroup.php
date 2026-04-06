@@ -33,7 +33,7 @@ class CompanyRideGroup extends Model
         'pickup_lng' => 'decimal:7',
         'destination_lat' => 'decimal:7',
         'destination_lng' => 'decimal:7',
-        'scheduled_time' => 'datetime:H:i',
+        'scheduled_time' => 'string',
         'start_date' => 'date',
         'end_date' => 'date',
         'max_capacity' => 'integer',

@@ -691,7 +691,7 @@ class CompanyRideGroupController extends Controller
                     'ride_group_id' => $assignment->ride_group_id,
                     'group_name' => $group->group_name ?? 'Unknown Group',
                     'group_type' => $group->group_type ?? 'to_office',
-                    'scheduled_time' => $group->scheduled_time ? now()->format('Y-m-d') . 'T' . $group->scheduled_time->format('H:i:s') . '.000000Z' : null,
+                    'scheduled_time' => $group->scheduled_time ? now()->format('Y-m-d') . ' ' . $group->scheduled_time : null,
                     'start_date' => $assignment->start_date->toDateString(),
                     'end_date' => $assignment->end_date->toDateString(),
                     'days_of_week' => $assignment->days_of_week,

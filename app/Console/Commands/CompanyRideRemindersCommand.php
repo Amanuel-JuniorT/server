@@ -41,13 +41,14 @@ class CompanyRideRemindersCommand extends Command
             ->with(['rideGroup', 'driver', 'employee'])
             ->get();
 
-        Log::info("[CompanyRemind] Found " . $instances->count() . " active instances for today.");
+        Log::info("[CompanyRemind] Found " . $instances->count() . " active instances for today. App TZ: " . config('app.timezone'));
 
+        /** @var CompanyGroupRideInstance $instance */
         foreach ($instances as $instance) {
             $scheduledTime = $instance->scheduled_time;
             $diffInMinutes = $now->diffInMinutes($scheduledTime, false);
 
-            Log::info("[CompanyRemind] Processing Instance #{$instance->id} | Scheduled: {$scheduledTime->format('H:i:s')} | Diff: {$diffInMinutes} mins");
+            Log::info("[CompanyRemind] Processing Instance #{$instance->id} | Scheduled: {$scheduledTime->toDateTimeString()} | TZ: {$scheduledTime->timezoneName} | Diff: {$diffInMinutes} mins");
 
             // 1. 2-Hour Reminder
             if ($diffInMinutes <= 120 && $diffInMinutes > 110 && !$instance->reminder_2h_sent) {
