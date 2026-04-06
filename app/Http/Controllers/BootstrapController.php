@@ -129,23 +129,57 @@ class BootstrapController extends Controller
                     ->first();
 
                 if ($upcomingInstance) {
+                    $group = $upcomingInstance->rideGroup;
+                    $groupType = $group->group_type ?? 'to_office';
+                    $pickup = $groupType === 'to_office' 
+                        ? ($employee->pickup_address ?? $group->pickup_address) 
+                        : $group->pickup_address;
+                    $destination = $groupType === 'from_office' 
+                        ? ($employee->pickup_address ?? $group->pickup_address) 
+                        : $group->destination_address;
+
                     $companyRideData = [
                         'id' => $upcomingInstance->id,
                         'ride_id' => $upcomingInstance->id,
                         'company_id' => $upcomingInstance->company_id,
-                        'route_name' => $upcomingInstance->rideGroup->group_name ?? 'Company Ride',
-                        'pickup_address' => $upcomingInstance->pickup_address,
-                        'destination_address' => $upcomingInstance->destination_address,
+                        'route_name' => $group->group_name,
+                        'pickup_location' => $pickup,
+                        'pickup_address' => $pickup,
+                        'origin_address' => $pickup,
+                        'pickup_lat' => $groupType === 'to_office' ? ($employee->pickup_lat ?? $group->pickup_lat) : $group->pickup_lat,
+                        'pickup_lng' => $groupType === 'to_office' ? ($employee->pickup_lng ?? $group->pickup_lng) : $group->pickup_lng,
+                        'dropoff_location' => $destination,
+                        'dropoff_address' => $destination,
+                        'destination_address' => $destination,
+                        'dropoff_lat' => $groupType === 'from_office' ? ($employee->pickup_lat ?? $group->pickup_lat) : $group->destination_lat,
+                        'dropoff_lng' => $groupType === 'from_office' ? ($employee->pickup_lng ?? $group->pickup_lng) : $group->destination_lng,
                         'scheduled_time' => $upcomingInstance->scheduled_time->toIso8601String(),
+                        'start_date' => $group->start_date,
+                        'end_date' => $group->end_date,
                         'status' => strtolower($upcomingInstance->status),
-                        'driver_id' => $upcomingInstance->driver_id,
                         'driver' => $upcomingInstance->driver ? [
                              'id' => $upcomingInstance->driver->id,
                              'user' => [
+                                 'id' => $upcomingInstance->driver->user->id,
                                  'name' => $upcomingInstance->driver->user->name ?? 'Unknown',
                                  'phone' => $upcomingInstance->driver->user->phone ?? null,
+                                 'profile_image' => ($upcomingInstance->driver->user->profile_image ?? null) ? \Illuminate\Support\Facades\Storage::url($upcomingInstance->driver->user->profile_image) : null,
+                             ],
+                             'vehicle' => [
+                                 'plate_number' => $upcomingInstance->driver->plate_number ?? null,
+                                 'make' => $upcomingInstance->driver->make ?? null,
+                                 'model' => $upcomingInstance->driver->model ?? null,
                              ]
-                        ] : null
+                        ] : null,
+                        'company_name' => $upcomingInstance->company->name ?? 'Unknown Company',
+                        'fellow_passengers' => $upcomingInstance->rideGroup->members
+                          ->where('employee_id', '!=', $employee->id)
+                          ->map(function ($m) use ($upcomingInstance) {
+                            return [
+                                'name' => $m->employee->name ?? 'Unknown',
+                                'status' => 'waiting'
+                            ];
+                          })->values()->toArray(),
                     ];
                 }
             }
