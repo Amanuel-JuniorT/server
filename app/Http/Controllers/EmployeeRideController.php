@@ -42,7 +42,7 @@ class EmployeeRideController extends Controller
       }
 
       // Get all ride groups where this employee is a member
-      $memberRecords = CompanyRideGroupMember::where('employee_id', $employee->id)
+      $memberRecords = CompanyRideGroupMember::where('employee_id', $user->id)
         ->with(['rideGroup.company', 'rideGroup.members.employee', 'rideGroup.assignments' => function ($query) {
           $query->whereIn('status', ['accepted', 'active'])
             ->where('end_date', '>=', now()->toDateString())

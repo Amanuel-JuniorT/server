@@ -76,6 +76,14 @@ class GenerateDailyCompanyRides extends Command
 
             $members = $group->members;
             if ($members->isEmpty()) {
+                // Skip if no members AND it's a home-based group (as we won't have addresses)
+                if ($group->origin_type === 'home' || $group->destination_type === 'home') {
+                    if (!$group->pickup_address || !$group->destination_address || !$group->pickup_lat || !$group->destination_lat) {
+                        $this->warn("Skipping group '{$group->group_name}': No members and missing default addresses/coordinates.");
+                        continue;
+                    }
+                }
+
                 // No members — create a single group-level instance (driver-only)
                 $instance = \App\Models\CompanyGroupRideInstance::create([
                     'company_id'          => $group->company_id,

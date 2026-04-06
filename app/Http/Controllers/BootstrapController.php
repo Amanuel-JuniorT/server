@@ -118,7 +118,7 @@ class BootstrapController extends Controller
             ->first();
 
         if ($employee) {
-            $memberRecords = \App\Models\CompanyRideGroupMember::where('employee_id', $employee->id)->pluck('ride_group_id');
+            $memberRecords = \App\Models\CompanyRideGroupMember::where('employee_id', $user->id)->pluck('ride_group_id');
 
             if ($memberRecords->isNotEmpty()) {
                 $upcomingInstance = \App\Models\CompanyGroupRideInstance::whereIn('ride_group_id', $memberRecords)
@@ -173,7 +173,7 @@ class BootstrapController extends Controller
                         ] : null,
                         'company_name' => $upcomingInstance->company->name ?? 'Unknown Company',
                         'fellow_passengers' => $upcomingInstance->rideGroup->members
-                          ->where('employee_id', '!=', $employee->id)
+                          ->where('employee_id', '!=', $user->id)
                           ->map(function ($m) use ($upcomingInstance) {
                             return [
                                 'name' => $m->employee->name ?? 'Unknown',
