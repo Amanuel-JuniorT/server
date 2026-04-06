@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Models\CompanyGroupRideInstance;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -31,12 +32,12 @@ class CompanyRideDriverAssigned implements ShouldBroadcastNow
   public function broadcastOn(): array
   {
     $channels = [
-      new Channel('company.' . $this->ride->company_id)
+      new PrivateChannel('company.' . $this->ride->company_id)
     ];
 
     // Also broadcast to driver if assigned
     if ($this->ride->driver_id && $this->ride->driver && $this->ride->driver->user) {
-      $channels[] = new Channel('driver.' . $this->ride->driver->user->id);
+      $channels[] = new PrivateChannel('driver.' . $this->ride->driver->user->id);
     }
 
     return $channels;

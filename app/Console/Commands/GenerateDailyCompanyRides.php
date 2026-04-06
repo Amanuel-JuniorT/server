@@ -77,7 +77,7 @@ class GenerateDailyCompanyRides extends Command
             $members = $group->members;
             if ($members->isEmpty()) {
                 // No members — create a single group-level instance (driver-only)
-                \App\Models\CompanyGroupRideInstance::create([
+                $instance = \App\Models\CompanyGroupRideInstance::create([
                     'company_id'          => $group->company_id,
                     'ride_group_id'       => $group->id,
                     'driver_id'           => $assignment->driver_id,
@@ -92,6 +92,10 @@ class GenerateDailyCompanyRides extends Command
                     'requested_at'        => now(),
                     'accepted_at'         => $assignment->driver_id ? now() : null,
                 ]);
+                
+                // Broadcast event
+                event(new \App\Events\RideScheduled($instance));
+                
                 $count++;
             } else {
                 // Create one instance per group member
@@ -104,7 +108,7 @@ class GenerateDailyCompanyRides extends Command
                     $destLng = ($group->destination_type === 'home') ? ($member->destination_lng ?? $group->destination_lng) : $group->destination_lng;
                     $destAdd = ($group->destination_type === 'home') ? ($member->destination_address ?? $group->destination_address) : $group->destination_address;
 
-                    \App\Models\CompanyGroupRideInstance::create([
+                    $instance = \App\Models\CompanyGroupRideInstance::create([
                         'company_id'          => $group->company_id,
                         'employee_id'         => $member->employee_id,
                         'ride_group_id'       => $group->id,
@@ -120,6 +124,10 @@ class GenerateDailyCompanyRides extends Command
                         'requested_at'        => now(),
                         'accepted_at'         => $assignment->driver_id ? now() : null,
                     ]);
+                    
+                    // Broadcast event
+                    event(new \App\Events\RideScheduled($instance));
+                    
                     $count++;
                 }
             }

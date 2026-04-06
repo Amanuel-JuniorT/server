@@ -2,8 +2,9 @@
 
 namespace App\Events;
 
-use App\Models\CompanyRide;
+use App\Models\CompanyGroupRideInstance;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -18,7 +19,7 @@ class RideScheduled implements ShouldBroadcastNow
   /**
    * Create a new event instance.
    */
-  public function __construct(CompanyRide $ride)
+  public function __construct(CompanyGroupRideInstance $ride)
   {
     $this->ride = $ride->load(['company', 'employee']);
   }
@@ -31,13 +32,13 @@ class RideScheduled implements ShouldBroadcastNow
   public function broadcastOn(): array
   {
     $channels = [
-      new Channel('company.' . $this->ride->company_id),
-      new Channel('drivers') // Broadcast to all drivers
+      new PrivateChannel('company.' . $this->ride->company_id),
+      new Channel('drivers') // Broadcast to all drivers (public)
     ];
 
     // Also broadcast to employee if exists
     if ($this->ride->employee_id && $this->ride->employee) {
-      $channels[] = new Channel('user.' . $this->ride->employee_id);
+      $channels[] = new PrivateChannel('user.' . $this->ride->employee_id);
     }
 
     return $channels;
