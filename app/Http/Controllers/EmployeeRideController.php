@@ -194,7 +194,7 @@ class EmployeeRideController extends Controller
             'destination_address' => $destination,
             'dropoff_lat' => $groupType === 'from_office' ? ($member->custom_pickup_lat ?: $member->pickup_lat) : $group->destination_lat,
             'dropoff_lng' => $groupType === 'from_office' ? ($member->custom_pickup_lng ?: $member->pickup_lng) : $group->destination_lng,
-            'scheduled_time' => now()->format('Y-m-d') . 'T' . $group->scheduled_time->format('H:i:s') . '.000000Z',
+            'scheduled_time' => now()->format('Y-m-d') . 'T' . \Carbon\Carbon::parse($group->scheduled_time)->format('H:i:s') . '.000000Z',
             'start_date' => $group->start_date,
             'end_date' => $group->end_date,
             'status' => 'scheduled',

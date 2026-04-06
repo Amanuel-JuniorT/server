@@ -81,7 +81,7 @@ class CompanyRideEnrollmentService
             ->get();
 
         $newDays = $newGroup->active_days ?? CompanyRideGroup::DEFAULT_ACTIVE_DAYS;
-        $newTime = $newGroup->scheduled_time; // Carbon instance (H:i)
+        $newTime = \Carbon\Carbon::parse($newGroup->scheduled_time); // Parse HH:mm string to Carbon instance
 
         foreach ($driverAssignments as $existing) {
             $existingGroup = $existing->rideGroup;
@@ -97,7 +97,7 @@ class CompanyRideEnrollmentService
             }
 
             // Check if scheduled times are within 60 minutes of each other
-            $existingTime = $existingGroup->scheduled_time;
+            $existingTime = \Carbon\Carbon::parse($existingGroup->scheduled_time);
             $diffMinutes = abs($newTime->diffInMinutes($existingTime));
 
             if ($diffMinutes < 60) {

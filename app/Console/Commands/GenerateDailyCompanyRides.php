@@ -53,7 +53,7 @@ class GenerateDailyCompanyRides extends Command
                 continue;
             }
 
-            $timeString = $group->scheduled_time->format('H:i:s');
+            $timeString = \Carbon\Carbon::parse($group->scheduled_time)->format('H:i:s');
             $scheduledTime = \Carbon\Carbon::parse($today->toDateString() . ' ' . $timeString);
 
             // Avoid duplicate generation for this group today
