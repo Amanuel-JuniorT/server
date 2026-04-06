@@ -134,5 +134,8 @@ class GenerateDailyCompanyRides extends Command
         }
 
         $this->info("Successfully generated {$count} ride instance(s).");
+
+        // Trigger reminders immediately after generation to catch any 'Go Now' scenarios
+        \Illuminate\Support\Facades\Artisan::call('rides:remind-company');
     }
 }

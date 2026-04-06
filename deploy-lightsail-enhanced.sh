@@ -258,8 +258,9 @@ server {
         include fastcgi_params;
         fastcgi_hide_header X-Powered-By;
         fastcgi_read_timeout 300;
-        fastcgi_buffers 16 16k;
-        fastcgi_buffer_size 32k;
+        fastcgi_buffers 32 32k;
+        fastcgi_buffer_size 64k;
+        fastcgi_busy_buffers_size 128k;
     }
 
     # Block access to hidden files

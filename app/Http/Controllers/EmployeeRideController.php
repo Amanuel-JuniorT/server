@@ -26,8 +26,23 @@ class EmployeeRideController extends Controller
         ], 403);
       }
 
-      // Get all ride groups where this user is a member
-      $memberRecords = CompanyRideGroupMember::where('employee_id', $user->id)
+      // Resolve the employee record for this user (participant ID)
+      $employee = \App\Models\CompanyEmployee::where('user_id', $user->id)
+        ->where('status', 'approved')
+        ->first();
+
+      if (!$employee) {
+        return response()->json([
+          'success' => true,
+          'message' => 'You are not part of any ride groups yet',
+          'data' => [
+            'rides' => []
+          ]
+        ]);
+      }
+
+      // Get all ride groups where this employee is a member
+      $memberRecords = CompanyRideGroupMember::where('employee_id', $employee->id)
         ->with(['rideGroup.company', 'rideGroup.members.employee', 'rideGroup.assignments' => function ($query) {
           $query->whereIn('status', ['accepted', 'active'])
             ->where('end_date', '>=', now()->toDateString())
@@ -37,6 +52,7 @@ class EmployeeRideController extends Controller
 
       Log::info('Company Rides Debug: Member records found', [
         'user_id' => $user->id,
+        'employee_id' => $employee->id,
         'count' => $memberRecords->count()
       ]);
 
@@ -194,7 +210,7 @@ class EmployeeRideController extends Controller
             'destination_address' => $destination,
             'dropoff_lat' => $groupType === 'from_office' ? ($member->custom_pickup_lat ?: $member->pickup_lat) : $group->destination_lat,
             'dropoff_lng' => $groupType === 'from_office' ? ($member->custom_pickup_lng ?: $member->pickup_lng) : $group->destination_lng,
-            'scheduled_time' => now()->format('Y-m-d') . 'T' . \Carbon\Carbon::parse($group->scheduled_time)->format('H:i:s') . '.000000Z',
+            'scheduled_time' => \Carbon\Carbon::parse(now()->format('Y-m-d') . ' ' . $group->scheduled_time)->toIso8601String(),
             'start_date' => $group->start_date,
             'end_date' => $group->end_date,
             'status' => 'scheduled',

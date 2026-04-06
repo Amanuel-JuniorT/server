@@ -149,6 +149,9 @@ class CompanyRideEnrollmentService
                 'group_id'      => $group->id,
             ]);
 
+            // Trigger reminders immediately so 'Go Now' or 'Arrived' broadcasts happen without waiting for cron
+            \Illuminate\Support\Facades\Artisan::call('rides:remind-company');
+
             return $assignment->fresh();
         } catch (\Exception $e) {
             DB::rollBack();
