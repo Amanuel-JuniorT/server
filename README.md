@@ -1,5 +1,6 @@
 # ECAB Server - Ride Sharing API
 
+
 ## Overview
 
 This is a Laravel-based backend API for a comprehensive ride-sharing application (ECAB) that supports both individual rides and ride pooling. The system includes real-time features, wallet management, driver approval workflows, and admin dashboard functionality.
