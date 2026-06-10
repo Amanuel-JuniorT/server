@@ -208,9 +208,11 @@ export default function CompanyAdminDashboard() {
                                 <span className="text-sm text-muted-foreground">Pending Purchases</span>
                                 <div className="mt-1 flex items-baseline gap-2">
                                     <span className="text-2xl font-bold">{stats?.ride_credits?.pending_packages || 0}</span>
-                                    <span className="text-xs font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded dark:bg-orange-950/30">
-                                        Action required
-                                    </span>
+                                    {stats?.ride_credits?.pending_packages > 0 && (
+                                        <span className="text-xs font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded dark:bg-orange-950/30">
+                                            Action required
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">Packages awaiting payment verification</p>
                             </div>
@@ -220,11 +222,13 @@ export default function CompanyAdminDashboard() {
                                 <div className="mt-1 flex items-baseline gap-2">
                                     <span className="text-2xl font-bold">
                                         {stats?.completed_rides > 0 
-                                            ? Math.floor(stats?.ride_credits?.remaining / (stats.completed_rides / 30 || 1))
+                                            ? Math.floor(stats?.ride_credits?.remaining / Math.max(1, stats.completed_rides / 30))
                                             : 'N/A'
                                         }
                                     </span>
-                                    <span className="text-muted-foreground text-sm">Days</span>
+                                    {stats?.completed_rides > 0 && (
+                                        <span className="text-muted-foreground text-sm">Days</span>
+                                    )}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1 text-balance">Based on average daily consumption over 30 days</p>
                             </div>

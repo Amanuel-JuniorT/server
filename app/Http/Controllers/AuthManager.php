@@ -269,7 +269,11 @@ class AuthManager extends Controller
 
     public function logout(Request $request)
     {
-        $request->user('sanctum')->tokens()->delete();
+        $user = $request->user('sanctum');
+        if ($user) {
+            \App\Models\DeviceToken::where('user_id', $user->id)->delete();
+            $user->tokens()->delete();
+        }
         return response()->json(['message' => 'Logged out successfully']);
     }
 }

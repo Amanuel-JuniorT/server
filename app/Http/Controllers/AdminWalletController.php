@@ -122,4 +122,144 @@ class AdminWalletController extends Controller
       ], 500);
     }
   }
+  public function getWithdrawals(Request $request)
+  {
+    try {
+      $status = $request->query('status'); // Optional status filter from query param
+
+      $query = Transaction::where('type', 'withdraw')
+        ->with(['wallet.user:id,name,email,phone']);
+
+      if ($status && in_array($status, ['pending', 'approved', 'rejected'])) {
+        $query->where('status', $status);
+      }
+
+      $withdrawals = $query->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($transaction) {
+          return [
+            'id' => $transaction->id,
+            'amount' => $transaction->amount,
+            'status' => $transaction->status,
+            'note' => $transaction->note,
+            'created_at' => $transaction->created_at,
+            'user' => $transaction->wallet->user,
+          ];
+        });
+
+      return response()->json([
+        'success' => true,
+        'data' => $withdrawals
+      ]);
+    } catch (\Exception $e) {
+      Log::error('Error fetching withdrawals: ' . $e->getMessage());
+      return response()->json([
+        'success' => false,
+        'message' => 'Failed to fetch withdrawals'
+      ], 500);
+    }
+  }
+
+  public function verifyWithdrawal($id)
+  {
+    try {
+      $transaction = Transaction::findOrFail($id);
+
+      if ($transaction->status !== 'pending') {
+        return response()->json([
+          'success' => false,
+          'message' => 'Transaction is not pending'
+        ], 400);
+      }
+
+      DB::beginTransaction();
+
+      // Update transaction status
+      $transaction->status = 'approved';
+      $transaction->save();
+
+      // Note: We don't deduct balance here because it was already deducted when requested in WalletController::withdraw.
+
+      AuditService::high('Wallet Withdrawal Approved', $transaction, "Approved withdrawal of " . abs($transaction->amount) . " ETB for {$transaction->wallet->user->name}");
+
+      DB::commit();
+
+      return response()->json([
+        'success' => true,
+        'message' => 'Withdrawal verified and approved'
+      ]);
+    } catch (\Exception $e) {
+      DB::rollBack();
+      Log::error('Error verifying withdrawal: ' . $e->getMessage());
+      return response()->json([
+        'success' => false,
+        'message' => 'Failed to verify withdrawal'
+      ], 500);
+    }
+  }
+
+  public function rejectWithdrawal(Request $request, $id)
+  {
+    try {
+      $transaction = Transaction::findOrFail($id);
+
+      if ($transaction->status !== 'pending') {
+        return response()->json([
+          'success' => false,
+          'message' => 'Transaction is not pending'
+        ], 400);
+      }
+
+      DB::beginTransaction();
+
+      // Update transaction status
+      $transaction->status = 'rejected';
+      $transaction->note = $transaction->note . ' - Rejected: ' . $request->input('reason', 'No reason provided');
+      $transaction->save();
+
+      // Refund the withdrawal amount back to user's wallet
+      // The original amount is stored as a negative value (e.g. -100)
+      $refundAmount = abs($transaction->amount);
+      
+      $wallet = $transaction->wallet;
+      $wallet->balance += $refundAmount;
+      $wallet->save();
+      
+      // We should also refund the withdrawal fee if it was created right after the withdrawal request
+      // Let's find a payment transaction created around the same time
+      $feeTransaction = Transaction::where('wallet_id', $wallet->id)
+        ->where('type', 'payment')
+        ->where('note', 'Withdrawal fee')
+        ->where('created_at', '>=', $transaction->created_at->subSeconds(5))
+        ->where('created_at', '<=', $transaction->created_at->addSeconds(5))
+        ->first();
+        
+      if ($feeTransaction) {
+          $feeRefund = abs($feeTransaction->amount);
+          $wallet->balance += $feeRefund;
+          $wallet->save();
+          
+          // Mark fee as reversed/rejected
+          $feeTransaction->status = 'rejected';
+          $feeTransaction->note = $feeTransaction->note . ' (Refunded due to rejection)';
+          $feeTransaction->save();
+      }
+
+      AuditService::high('Wallet Withdrawal Rejected', $transaction, "Rejected withdrawal of " . abs($transaction->amount) . " ETB for {$transaction->wallet->user->name}. Reason: " . ($request->reason ?? 'No reason provided'));
+
+      DB::commit();
+
+      return response()->json([
+        'success' => true,
+        'message' => 'Withdrawal rejected and funds returned to wallet'
+      ]);
+    } catch (\Exception $e) {
+      DB::rollBack();
+      Log::error('Error rejecting withdrawal: ' . $e->getMessage());
+      return response()->json([
+        'success' => false,
+        'message' => 'Failed to reject withdrawal'
+      ], 500);
+    }
+  }
 }

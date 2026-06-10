@@ -154,6 +154,11 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
     Route::post('admin/wallet/topups/{id}/verify', [\App\Http\Controllers\AdminWalletController::class, 'verifyTopup']);
     Route::post('admin/wallet/topups/{id}/reject', [\App\Http\Controllers\AdminWalletController::class, 'rejectTopup']);
 
+    // Admin Wallet / Withdrawals
+    Route::get('admin/wallet/withdrawals', [\App\Http\Controllers\AdminWalletController::class, 'getWithdrawals']);
+    Route::post('admin/wallet/withdrawals/{id}/verify', [\App\Http\Controllers\AdminWalletController::class, 'verifyWithdrawal']);
+    Route::post('admin/wallet/withdrawals/{id}/reject', [\App\Http\Controllers\AdminWalletController::class, 'rejectWithdrawal']);
+
     // Admin Management (Invitation System)
     Route::get('admin/admins', [\App\Http\Controllers\Admin\AdminManagementController::class, 'index'])->name('admin.admins');
     Route::post('admin/admins/invite', [\App\Http\Controllers\Admin\InvitationController::class, 'store'])->name('admin.invite');
@@ -298,6 +303,18 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsCompanyA
         $companyId = $user->company_id;
 
         $company = \App\Models\Company::find($companyId);
+        
+        $activeGroups = \App\Models\CompanyRideGroup::where('company_id', $companyId)
+            ->where('status', 'active')
+            ->get();
+            
+        $currentlyReserved = 0;
+        foreach ($activeGroups as $g) {
+            $days = count($g->active_days ?? ['mon','tue','wed','thu','fri']);
+            $currentlyReserved += ($days * 4);
+        }
+        
+        $availableBalance = max(0, $company->total_remaining_rides - $currentlyReserved);
 
         return response()->json([
             'success' => true,
@@ -308,6 +325,8 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsCompanyA
                 'latitude' => $company->default_origin_lat,
                 'longitude' => $company->default_origin_lng,
                 'total_remaining_rides' => $company->total_remaining_rides,
+                'reserved_rides' => $currentlyReserved,
+                'available_rides' => $availableBalance,
             ]
         ]);
     });

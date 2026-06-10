@@ -218,10 +218,27 @@ class CompanyRideGroupController extends Controller
             DB::beginTransaction();
 
             $company = \App\Models\Company::findOrFail($companyId);
-            if ($company->total_remaining_rides <= 0) {
+            
+            // Calculate reserved rides dynamically
+            $activeGroups = CompanyRideGroup::where('company_id', $companyId)
+                ->where('status', 'active')
+                ->get();
+                
+            $currentlyReserved = 0;
+            foreach ($activeGroups as $g) {
+                $days = count($g->active_days ?? ['mon','tue','wed','thu','fri']);
+                $currentlyReserved += ($days * 4); // Assuming 4 weeks per month
+            }
+            
+            $newGroupDays = count($request->active_days ?? ['mon','tue','wed','thu','fri']);
+            $newGroupReserved = $newGroupDays * 4;
+            
+            $availableBalance = $company->total_remaining_rides - $currentlyReserved;
+            
+            if ($availableBalance < $newGroupReserved) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Your company has no ride credits. Please purchase a ride package to create new ride groups.'
+                    'message' => "Insufficient ride balance. This group requires approx. {$newGroupReserved} rides/month, but you only have {$availableBalance} available."
                 ], 403);
             }
 

@@ -16,6 +16,7 @@ use App\Events\PoolRejected;
 use App\Jobs\ProcessPoolTimeout;
 use App\Jobs\RetryPoolMatch;
 use Illuminate\Support\Facades\DB;
+use App\Services\GeocodingService;
 
 use App\Services\UnifiedNotificationService;
 
@@ -68,7 +69,7 @@ class PoolingController extends Controller
 
         foreach ($compatibleRides as $ride) {
             // Get or generate route polyline
-            $ridePolyline = $ride->encoded_route ?? RouteHelper::getCurrentRoutePolyline(
+            $ridePolyline = $ride->route_polyline ?? RouteHelper::getCurrentRoutePolyline(
                 $ride->origin_lat,
                 $ride->origin_lng,
                 $ride->destination_lat,
@@ -282,6 +283,11 @@ class PoolingController extends Controller
             DB::transaction(function () use ($pooling) {
                 // Create second ride record for Passenger B
                 $originalRide = $pooling->ride;
+                
+                $geocodingService = new GeocodingService();
+                $pickupAddress = $geocodingService->reverseGeocode($pooling->origin_lat, $pooling->origin_lng);
+                $destinationAddress = $geocodingService->reverseGeocode($pooling->destination_lat, $pooling->destination_lng);
+
                 $poolRide = Ride::create([
                     'passenger_id' => $pooling->passenger_id,
                     'driver_id' => $pooling->driver_id,
@@ -289,13 +295,15 @@ class PoolingController extends Controller
                     'origin_lng' => $pooling->origin_lng,
                     'destination_lat' => $pooling->destination_lat,
                     'destination_lng' => $pooling->destination_lng,
-                    'pickup_address' => 'Pool pickup', // Get from geocoding
-                    'destination_address' => 'Pool destination',
+                    'pickup_address' => $pickupAddress,
+                    'destination_address' => $destinationAddress,
                     'price' => $originalRide->price * 0.7, // 30% discount
                     'status' => 'accepted',
                     'is_pool_ride' => true,
                     'parent_ride_id' => $originalRide->id,
                     'pool_partner_ride_id' => $originalRide->id,
+                    'vehicle_type_id' => $originalRide->vehicle_type_id,
+                    'cash_payment' => $originalRide->cash_payment,
                     'requested_at' => now(),
                 ]);
 

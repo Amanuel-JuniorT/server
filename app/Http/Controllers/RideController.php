@@ -1205,27 +1205,35 @@ class RideController extends Controller
     public function updateStatus($id, Request $request)
     {
         $ride = Ride::findOrFail($id);
+        $user = $request->user();
+
+        // Security check: Only the assigned driver can update the status
+        if (!$user->driver || $ride->driver_id !== $user->driver->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $status = $request->input('status');
 
-        $ride->status = $status;
-        if ($status === 'arrived') {
-            $ride->arrived_at = now();
+        // Security check: Only allow 'arrived' status update via this generic endpoint
+        if ($status !== 'arrived') {
+            return response()->json(['message' => 'Invalid status update. Use dedicated endpoints for other actions.'], 400);
         }
+
+        $ride->status = $status;
+        $ride->arrived_at = now();
         $ride->save();
 
-        if ($status === 'arrived') {
-            broadcast(new DriverArrived($ride))->toOthers();
+        broadcast(new DriverArrived($ride))->toOthers();
 
-            // Notify passenger via FCM
-            $this->notificationService->notifyUser(
-                $ride->passenger_id,
-                "Driver Arrived",
-                "Your driver has arrived at the pickup location.",
-                ['ride_id' => $ride->id, 'status' => 'arrived'],
-                null,
-                'Passenger'
-            );
-        }
+        // Notify passenger via FCM
+        $this->notificationService->notifyUser(
+            $ride->passenger_id,
+            "Driver Arrived",
+            "Your driver has arrived at the pickup location.",
+            ['ride_id' => $ride->id, 'status' => 'arrived'],
+            null,
+            'Passenger'
+        );
 
         broadcast(new RideStatusChanged($ride))->toOthers();
 

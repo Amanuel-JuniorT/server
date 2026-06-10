@@ -9,7 +9,6 @@ use App\Http\Controllers\AuthManager;
 use App\Http\Controllers\DriverProfileController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\DriverStatusController;
-use App\Http\Controllers\Wallet_Controller;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CompanyRideDriverController;
 use App\Http\Controllers\CompanyRideAdminController;
@@ -243,9 +242,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Company Management
     Route::post('/company/register', [CompanyController::class, 'register']);
     Route::get('/company/list', [CompanyController::class, 'list']);
-    Route::get('/company/{id}', [CompanyController::class, 'show']);
-    Route::put('/company/{id}', [CompanyController::class, 'update']);
-    Route::delete('/company/{id}', [CompanyController::class, 'delete']);
+    Route::get('/company/rides', [EmployeeRideController::class, 'getCompanyRides']);
+    Route::get('/company/{id}', [CompanyController::class, 'show'])->where('id', '[0-9]+');
+    Route::put('/company/{id}', [CompanyController::class, 'update'])->where('id', '[0-9]+');
+    Route::delete('/company/{id}', [CompanyController::class, 'delete'])->where('id', '[0-9]+');
 
     // Employee-Company Linking
     Route::post('/employee/link-company', [EmployeeController::class, 'linkCompany']);
@@ -300,6 +300,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/payment-receipts/{receiptId}/verify', [CompanyPaymentReceiptController::class, 'verify']);
     Route::post('/admin/payment-receipts/{receiptId}/reject', [CompanyPaymentReceiptController::class, 'reject']);
 
+    Route::post('/passenger/change-password', [\App\Http\Controllers\PassengerController::class, 'changePassword']);
+    Route::post('/passenger/delete-account', [\App\Http\Controllers\PassengerController::class, 'deleteAccount']);
+
     // Driver Ride Group Assignments
     Route::get('/driver/ride-groups/available', [CompanyRideGroupController::class, 'getAvailableForDriver']);
     Route::post('/driver/ride-group-assignment/{assignmentId}/accept', [CompanyRideGroupController::class, 'acceptAssignment']);
@@ -330,7 +333,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/admin/config/rewards', [\App\Http\Controllers\AdminConfigController::class, 'getRewardsConfig']);
 });
 
-// Other Public Routes (outside group)
-Route::get('/nearby-drivers', [DriverProfileController::class, 'getNearbyDrivers']);
-Route::get('wallet/get-receiver/{phone}', [WalletController::class, 'getReceiver']);
-Route::post('/send-notification', [AdminNotificationController::class, 'send02']);
+// Admin Utility Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/send-notification', [AdminNotificationController::class, 'send02']);
+});

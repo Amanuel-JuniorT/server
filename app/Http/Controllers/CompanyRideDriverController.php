@@ -390,6 +390,11 @@ class CompanyRideDriverController extends Controller
             // 2. Settlement based on Billing Type
             $companyWallet = Wallet::firstOrCreate(['company_id' => $company->id], ['balance' => 0]);
             
+            // Deduct ride credit if company has a package
+            if ($company->total_remaining_rides > 0) {
+                $company->decrement('total_remaining_rides', 1);
+            }
+            
             // Check prepaid balance
             if ($company->billing_type === 'prepaid' && $companyWallet->balance < $totalAmount) {
                 // In production, we might allow it once or fail it. 

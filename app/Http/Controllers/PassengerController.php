@@ -444,4 +444,54 @@ class PassengerController extends Controller
             sin($dLng / 2) ** 2;
         return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
+    public function changePassword(Request $request)
+    {
+        $user = $request->user('sanctum');
+        if (!$user) {
+            return response()->json(['message' => 'User not authorized'], 403);
+        }
+
+        $request->validate([
+            'old_password' => 'required',
+            'new_password' => 'required|string|min:8',
+        ]);
+
+        if (!Hash::check($request->old_password, $user->password)) {
+            return response()->json(['message' => 'Current password does not match'], 400);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json(['message' => 'Password changed successfully']);
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        $user = $request->user('sanctum');
+        if (!$user) {
+            return response()->json(['message' => 'User not authorized'], 403);
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            // Delete device tokens
+            DeviceToken::where('user_id', $user->id)->delete();
+            
+            // Revoke all Sanctum tokens
+            $user->tokens()->delete();
+            
+            // For rides or historical data we typically want to retain them or anonymize
+            // Here we just soft delete or hard delete the user based on application policy
+            // Assuming soft delete or hard delete is supported on the User model
+            $user->delete();
+            
+            DB::commit();
+            return response()->json(['message' => 'Account deleted successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to delete account: ' . $e->getMessage()], 500);
+        }
+    }
 }

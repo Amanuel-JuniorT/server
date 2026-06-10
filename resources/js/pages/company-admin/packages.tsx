@@ -8,6 +8,7 @@ import { SimpleTable as Table, TableBody, TableCell, TableHead, TableHeader, Tab
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { CheckCircle2, CreditCard, ExternalLink, FilePlus, FileText, History, LayoutDashboard, Loader2, Package, Receipt, Sparkles, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -199,7 +200,7 @@ export default function CompanyPackagesPage() {
         }
 
         setIsSubmittingReceipt(true);
-        
+
         try {
             const formData = new FormData();
             formData.append('receipt_file', selectedFile);
@@ -210,18 +211,14 @@ export default function CompanyPackagesPage() {
             formData.append('contract_period_start', receiptForm.contract_period_start);
             formData.append('contract_period_end', receiptForm.contract_period_end);
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const res = await fetch(`/company-admin/api/payment-receipts`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken || '',
-                },
-                body: formData,
+            // Use axios — Inertia pre-configures it with the XSRF-TOKEN cookie interceptor,
+            // which is always fresh (unlike the page-load meta tag that can go stale under Octane).
+            const response = await axios.post('/company-admin/api/payment-receipts', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            const data = await res.json();
-
-            if (res.ok && data.success) {
+            const data = response.data;
+            if (data.success) {
                 toast.success('Payment receipt submitted successfully!');
                 setIsReceiptDialogOpen(false);
                 fetchReceipts();
@@ -229,8 +226,9 @@ export default function CompanyPackagesPage() {
             } else {
                 toast.error(data.message || 'Failed to submit receipt');
             }
-        } catch (error) {
-            toast.error('An error occurred during submission');
+        } catch (error: any) {
+            const message = error?.response?.data?.message || 'An error occurred during submission';
+            toast.error(message);
         } finally {
             setIsSubmittingReceipt(false);
         }

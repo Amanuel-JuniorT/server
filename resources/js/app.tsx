@@ -2,6 +2,16 @@ import 'leaflet/dist/leaflet.css';
 import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/react';
+import axios from 'axios';
+
+// Configure axios globally for CSRF protection on all web routes.
+// Reading the token once at bootstrap is the standard Laravel pattern and works
+// correctly under Octane (where the meta-tag token is always valid for the current session).
+const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+if (csrfToken) {
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+}
+axios.defaults.withCredentials = true;
 import { configureEcho } from '@laravel/echo-react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
