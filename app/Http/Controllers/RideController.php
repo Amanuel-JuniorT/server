@@ -1277,15 +1277,21 @@ class RideController extends Controller
             $validated['destLat'],
             $validated['destLng'],
             $vehicleType,
-            $validated['passenger_id'] ? User::find($validated['passenger_id']) : null
+            !empty($validated['passenger_id']) ? User::find($validated['passenger_id']) : null
         );
 
         $fare = $fareData['final_fare'];
 
         // Get addresses using reverse geocoding if not provided
         $geocodingService = new GeocodingService();
-        $pickupAddress = $validated['pickupAddress'] ?? $geocodingService->reverseGeocode($validated['originLat'], $validated['originLng']);
-        $destinationAddress = $validated['destinationAddress'] ?? $geocodingService->reverseGeocode($validated['destLat'], $validated['destLng']);
+        $pickupAddress = $validated['pickupAddress'] ?? null;
+        if (!$pickupAddress) {
+            $pickupAddress = $geocodingService->reverseGeocode($validated['originLat'], $validated['originLng']);
+        }
+        $destinationAddress = $validated['destinationAddress'] ?? null;
+        if (!$destinationAddress) {
+            $destinationAddress = $geocodingService->reverseGeocode($validated['destLat'], $validated['destLng']);
+        }
 
         // Default cash_payment to true if not provided
         $cashPayment = $validated['cash_payment'] ?? true;
@@ -1299,9 +1305,9 @@ class RideController extends Controller
             $driverEarnings = $fareAmount - $platformCommission;
 
             // Create or find passenger for straight hail
-            $passengerId = $validated['passenger_id'] ?? null;
+            $passengerId = !empty($validated['passenger_id']) ? $validated['passenger_id'] : null;
             if (!$passengerId) {
-                $phone = $validated['passenger_wid'] ?? 'Unknown';
+                $phone = !empty($validated['passenger_wid']) ? $validated['passenger_wid'] : 'Unknown';
                 // Try to find existing user by phone
                 $passenger = User::where('phone', $phone)->first();
 
