@@ -16,13 +16,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'XSRF-TOKEN']);
 
         $middleware->validateCsrfTokens(except: [
             'admin/wallet/topups/*/verify',
             'admin/wallet/topups/*/reject',
             'admin/payment-receipts/*/verify',
             'admin/payment-receipts/*/reject',
+            'admin/notifications/send',
+            'admin/promotions/*/broadcast',
         ]);
 
         $middleware->web(append: [
