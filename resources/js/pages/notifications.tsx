@@ -4,6 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Bell, Loader2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -87,37 +88,20 @@ export default function NotificationsPage() {
                                     }
 
                                     try {
-                                        // Using the verified API route
-                                        // Using the verified API route
-                                        const res = await fetch('/api/send-notification', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-Requested-With': 'XMLHttpRequest',
-                                                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '',
-                                            },
-                                            body: JSON.stringify({
-                                                ...payload,
-                                                data: form.data.value ? JSON.parse(form.data.value) : {},
-                                            }),
+                                        const res = await axios.post('/admin/notifications/send', {
+                                            ...payload,
+                                            data: form.data.value ? JSON.parse(form.data.value) : {},
                                         });
 
-                                        let errorMsg = 'Failed to queue FCM notification';
-                                        if (!res.ok) {
-                                            try {
-                                                const json = await res.json();
-                                                errorMsg = json.error || json.message || errorMsg;
-                                            } catch (e) {
-                                                errorMsg = await res.text();
-                                            }
-                                            throw new Error(errorMsg);
+                                        if (res.data.success) {
+                                            pushNotification('Success', `Notification initialized successfully via web broadcast.`, 'success');
+                                        } else {
+                                            throw new Error(res.data.message || 'Failed to send notification');
                                         }
-
-                                        const json = await res.json();
-                                        pushNotification('Success', `Notification sent to ${json.fcm_count ?? 'users'} recipients.`, 'success');
                                     } catch (err: any) {
                                         console.error(err);
-                                        pushNotification('Error', err.message, 'error');
+                                        const errMsg = err.response?.data?.message || err.message || 'Failed to send notification';
+                                        pushNotification('Error', errMsg, 'error');
                                     } finally {
                                         setLoading(false);
                                     }
