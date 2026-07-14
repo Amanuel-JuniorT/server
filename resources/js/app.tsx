@@ -4,14 +4,23 @@ import '../css/app.css';
 import { createInertiaApp } from '@inertiajs/react';
 import axios from 'axios';
 
-// Configure axios globally for CSRF protection on all web routes.
-// Reading the token once at bootstrap is the standard Laravel pattern and works
-// correctly under Octane (where the meta-tag token is always valid for the current session).
-const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-if (csrfToken) {
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-}
+// Configure axios globally for CSRF protection.
+// Use a request interceptor so the token is always fresh from the XSRF-TOKEN cookie
+// (set by Laravel on every response), falling back to the meta tag. This prevents
+// CSRF token mismatch after Octane worker restarts.
 axios.defaults.withCredentials = true;
+axios.interceptors.request.use((config) => {
+    // Prefer the cookie Laravel rotates on each response
+    const cookieMatch = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    const token = cookieMatch
+        ? decodeURIComponent(cookieMatch[1])
+        : document.head.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+    if (token) {
+        config.headers['X-XSRF-TOKEN'] = token;
+        config.headers['X-CSRF-TOKEN'] = token;
+    }
+    return config;
+});
 window.axios = axios;
 import { configureEcho } from '@laravel/echo-react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
