@@ -181,6 +181,9 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
     Route::get('transactions', [AdminDashboardController::class, 'transactions'])->name('transactions.index');
     Route::get('logs', [AdminDashboardController::class, 'logs'])->name('logs.index');
     Route::get('audit', [AdminDashboardController::class, 'audit'])->name('audit.index');
+
+    // System Income
+    Route::get('system-income', [AdminDashboardController::class, 'systemIncome'])->name('system-income');
 });
 
 // Company Admin routes

@@ -65,6 +65,7 @@ const superAdminNavItems = [
     {
         group: 'Finance',
         items: [
+            { title: 'System Income', href: '/system-income', icon: TrendingUp },
             { title: 'Payment Receipts', href: '/payment-receipts', icon: Ticket },
             { title: 'Transactions', href: '/transactions', icon: CreditCard },
         ],

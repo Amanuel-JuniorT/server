@@ -1196,4 +1196,128 @@ class AdminDashboardController extends Controller
             return redirect()->back()->with('error', 'Failed to reject employee request: ' . $e->getMessage());
         }
     }
+
+    /**
+     * System Income — commission earned by the platform from completed rides.
+     */
+    public function systemIncome(Request $request)
+    {
+        $period    = $request->input('period', 'month');
+        $startDate = $request->input('start_date');
+        $endDate   = $request->input('end_date');
+
+        // Resolve date range
+        switch ($period) {
+            case 'today':
+                $from = now()->startOfDay();
+                $to   = now()->endOfDay();
+                break;
+            case 'week':
+                $from = now()->startOfWeek();
+                $to   = now()->endOfWeek();
+                break;
+            case 'year':
+                $from = now()->startOfYear();
+                $to   = now()->endOfYear();
+                break;
+            case 'custom':
+                $from = $startDate ? \Carbon\Carbon::parse($startDate)->startOfDay() : now()->startOfMonth();
+                $to   = $endDate   ? \Carbon\Carbon::parse($endDate)->endOfDay()     : now()->endOfDay();
+                break;
+            case 'month':
+            default:
+                $from = now()->startOfMonth();
+                $to   = now()->endOfMonth();
+                break;
+        }
+
+        // Summary: total income, total ride revenue, ride count, avg commission
+        $summary = DB::selectOne("
+            SELECT
+                COUNT(p.id)                                                           AS total_rides,
+                COALESCE(SUM(p.amount), 0)                                            AS total_revenue,
+                COALESCE(SUM(p.amount * vt.commission_percentage / 100), 0)          AS total_income,
+                COALESCE(AVG(vt.commission_percentage), 0)                           AS avg_commission
+            FROM payments p
+            JOIN rides r     ON r.id = p.ride_id
+            LEFT JOIN vehicle_types vt ON vt.id = r.vehicle_type_id
+            WHERE p.status = 'paid'
+              AND p.created_at BETWEEN ? AND ?
+        ", [$from, $to]);
+
+        // Income over time (daily)
+        $incomeOverTime = DB::select("
+            SELECT
+                DATE(p.created_at) AS date,
+                COALESCE(SUM(p.amount * vt.commission_percentage / 100), 0) AS income,
+                COALESCE(SUM(p.amount), 0)                                  AS revenue,
+                COUNT(p.id)                                                 AS rides
+            FROM payments p
+            JOIN rides r     ON r.id = p.ride_id
+            LEFT JOIN vehicle_types vt ON vt.id = r.vehicle_type_id
+            WHERE p.status = 'paid'
+              AND p.created_at BETWEEN ? AND ?
+            GROUP BY DATE(p.created_at)
+            ORDER BY date ASC
+        ", [$from, $to]);
+
+        // Income by vehicle type
+        $byVehicleType = DB::select("
+            SELECT
+                COALESCE(vt.display_name, vt.name, 'Unknown')              AS vehicle_type,
+                vt.commission_percentage,
+                COUNT(p.id)                                                 AS rides,
+                COALESCE(SUM(p.amount), 0)                                  AS revenue,
+                COALESCE(SUM(p.amount * vt.commission_percentage / 100), 0) AS income
+            FROM payments p
+            JOIN rides r     ON r.id = p.ride_id
+            LEFT JOIN vehicle_types vt ON vt.id = r.vehicle_type_id
+            WHERE p.status = 'paid'
+              AND p.created_at BETWEEN ? AND ?
+            GROUP BY vt.id, vt.display_name, vt.name, vt.commission_percentage
+            ORDER BY income DESC
+        ", [$from, $to]);
+
+        // Detailed income rows (latest 100 within range)
+        $details = DB::select("
+            SELECT
+                p.id                                                              AS payment_id,
+                r.id                                                              AS ride_id,
+                COALESCE(vt.display_name, vt.name, 'Unknown')                    AS vehicle_type,
+                vt.commission_percentage,
+                p.amount                                                          AS fare,
+                ROUND(p.amount * vt.commission_percentage / 100, 2)              AS system_income,
+                p.method                                                          AS payment_method,
+                p.created_at                                                      AS paid_at,
+                u.name                                                            AS passenger_name
+            FROM payments p
+            JOIN rides r     ON r.id = p.ride_id
+            JOIN users u     ON u.id = r.passenger_id
+            LEFT JOIN vehicle_types vt ON vt.id = r.vehicle_type_id
+            WHERE p.status = 'paid'
+              AND p.created_at BETWEEN ? AND ?
+            ORDER BY p.created_at DESC
+            LIMIT 100
+        ", [$from, $to]);
+
+        // Format paid_at in Addis Ababa timezone
+        $details = array_map(function ($row) {
+            $row->paid_at = \Carbon\Carbon::parse($row->paid_at)
+                ->timezone('Africa/Addis_Ababa')
+                ->format('Y-m-d H:i');
+            return $row;
+        }, $details);
+
+        return Inertia::render('system-income', [
+            'summary'       => (array) $summary,
+            'incomeOverTime'=> $incomeOverTime,
+            'byVehicleType' => $byVehicleType,
+            'details'       => $details,
+            'filters'       => [
+                'period'     => $period,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+            ],
+        ]);
+    }
 }
