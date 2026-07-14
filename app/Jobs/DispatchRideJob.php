@@ -91,11 +91,20 @@ class DispatchRideJob implements ShouldQueue
         $query = Driver::select('drivers.*', 'locations.latitude', 'locations.longitude')
             ->join('locations', 'drivers.id', '=', 'locations.driver_id')
             ->join('vehicles', 'drivers.id', '=', 'vehicles.driver_id')
-            ->join('wallets', 'drivers.user_id', '=', 'wallets.user_id')
+            ->joinSub(
+                // Use only the oldest wallet per user (lowest ID) to avoid duplicate rows
+                DB::table('wallets')
+                    ->select('user_id', DB::raw('SUM(balance) as balance'))
+                    ->groupBy('user_id'),
+                'wallet_agg',
+                'drivers.user_id',
+                '=',
+                'wallet_agg.user_id'
+            )
             ->where('drivers.status', 'available')
             ->where('drivers.approval_state', 'approved')
             ->where('vehicles.vehicle_type_id', $this->ride->vehicle_type_id)
-            ->where('wallets.balance', '>=', $min_balance);
+            ->where('wallet_agg.balance', '>=', $min_balance);
 
         if (!empty($excludedDrivers)) {
             $query->whereNotIn('drivers.id', $excludedDrivers);
@@ -127,6 +136,7 @@ class DispatchRideJob implements ShouldQueue
             ->orderBy('distance', 'asc')
             ->limit(1)
             ->first();
+
 
 
         if (!empty($nearbyDriver)) {

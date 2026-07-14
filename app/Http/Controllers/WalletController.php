@@ -15,10 +15,20 @@ use App\Events\GlobalAdminNotification;
 
 class WalletController extends Controller
 {
+    private function getWallet($userId)
+    {
+        $wallet = Wallet::where('user_id', $userId)->orderBy('id', 'asc')->first();
+        if (!$wallet) {
+            // Fallback to firstOrCreate if it really doesn't exist
+            $wallet = Wallet::firstOrCreate(['user_id' => $userId], ['balance' => 0]);
+        }
+        return $wallet;
+    }
+
     public function index()
     {
         try {
-            $wallet = Wallet::firstOrCreate(['user_id' => Auth::id()], ['balance' => 0]);
+            $wallet = $this->getWallet(Auth::id());
             return response()->json(['balance' => $wallet->balance]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Something went wrong', 'error' => $e->getMessage()], 500);
@@ -31,7 +41,7 @@ class WalletController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
-        $wallet = Wallet::firstOrCreate(['user_id' => $user->id], ['balance' => 0]);
+        $wallet = $this->getWallet($user->id);
         $transactions = $wallet->transactions()->latest()->get();
         return response()->json($transactions);
     }
@@ -55,7 +65,7 @@ class WalletController extends Controller
             return response()->json(['message' => 'Invalid password'], 403);
         }
 
-        $wallet = Wallet::firstOrCreate(['user_id' => $user->id], ['balance' => 0]);
+        $wallet = $this->getWallet($user->id);
 
         if ($wallet->balance < $request->amount) {
             return response()->json(['message' => 'Insufficient balance'], 400);
@@ -118,7 +128,7 @@ class WalletController extends Controller
                 'receipt' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
             ]);
 
-            $wallet = Wallet::firstOrCreate(['user_id' => Auth::id()]);
+            $wallet = $this->getWallet(Auth::id());
 
             $receiptPath = null;
             if ($request->hasFile('receipt')) {
