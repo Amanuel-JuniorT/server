@@ -31,6 +31,7 @@ import {
     Settings,
     Sparkles,
     Ticket,
+    TrendingUp,
     User,
     Users,
 } from 'lucide-react';
