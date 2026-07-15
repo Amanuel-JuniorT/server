@@ -17,68 +17,112 @@ class AdminNotificationController extends Controller
     private readonly UnifiedNotificationService $notificationService
   ) {}
 
-  public function send(Request $request)
+  public function send(Request $request, FcmService $fcmService)
   {
-    $validated = $request->validate([
-      'target' => 'required|in:all_passengers,all_drivers,user_id,tokens',
-      'user_id' => 'nullable|integer',
-      'tokens' => 'nullable|array',
-      'title' => 'required|string|max:255',
-      'body' => 'required|string|max:2000',
-      'data' => 'nullable',
-      'high_priority' => 'nullable|boolean',
-    ]);
+    try {
+      $validated = $request->validate([
+        'target' => 'required|in:all_passengers,all_drivers,user_id,tokens',
+        'user_id' => 'nullable|integer',
+        'tokens' => 'nullable|array',
+        'title' => 'required|string|max:255',
+        'body' => 'required|string|max:2000',
+        'data' => 'nullable',
+        'high_priority' => 'nullable|boolean',
+      ]);
 
-    // Determine channel based on target
-    $channel = 'promotions';
-    if ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
-      $channel = 'passenger.' . $validated['user_id'];
-    } elseif ($validated['target'] === 'all_drivers') {
-      $channel = 'drivers_broadcast';
-    }
+      // Determine WebSocket channel based on target
+      $channel = 'promotions';
+      if ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
+        $channel = 'passenger.' . $validated['user_id'];
+      } elseif ($validated['target'] === 'all_drivers') {
+        $channel = 'drivers_broadcast';
+      }
 
-    // $tokens = [];
-    // if ($validated['target'] === 'all_passengers') {
-    //   $tokens = DeviceToken::where('app', 'Passenger')->pluck('token')->all();
-    // } elseif ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
-    //   $tokens = DeviceToken::where('user_id', $validated['user_id'])->pluck('token')->all();
-    // } elseif ($validated['target'] === 'tokens' && !empty($validated['tokens'])) {
-    //   $tokens = $validated['tokens'];
-    // }
+      // Resolve FCM tokens and user IDs from DeviceToken table
+      $tokens = [];
+      $userIds = [];
+      $appTarget = ($validated['target'] === 'all_drivers') ? 'Driver' : 'Passenger';
 
-    // $tokens = array_values(array_unique(array_filter($tokens)));
+      if ($validated['target'] === 'all_passengers') {
+        $rows = DeviceToken::where('app', 'Passenger')->get();
+        $tokens = $rows->pluck('token')->filter()->unique()->values()->all();
+        $userIds = $rows->pluck('user_id')->unique()->values()->all();
+      } elseif ($validated['target'] === 'all_drivers') {
+        $rows = DeviceToken::where('app', 'Driver')->get();
+        $tokens = $rows->pluck('token')->filter()->unique()->values()->all();
+        $userIds = $rows->pluck('user_id')->unique()->values()->all();
+      } elseif ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
+        $rows = DeviceToken::where('user_id', $validated['user_id'])->get();
+        $tokens = $rows->pluck('token')->filter()->unique()->values()->all();
+        $userIds = [$validated['user_id']];
+      } elseif ($validated['target'] === 'tokens' && !empty($validated['tokens'])) {
+        $tokens = array_values(array_unique(array_filter($validated['tokens'])));
+      }
 
-    // if (empty($tokens)) {
-    //   return response()->json(['success' => false, 'message' => 'No tokens found'], 422);
-    // }
+      // Persist notification history for each targeted user
+      foreach ($userIds as $uid) {
+        try {
+          UserNotification::create([
+            'user_id' => $uid,
+            'title'   => $validated['title'],
+            'body'    => $validated['body'],
+            'data'    => $validated['data'] ?? [],
+            'type'    => $validated['data']['type'] ?? 'admin',
+          ]);
+        } catch (\Exception $e) {
+          Log::warning("Failed to persist admin notification for user {$uid}: " . $e->getMessage());
+        }
+      }
 
-    Log::info('Admin hybrid notification sent', [
-      'admin_id' => optional($request->user())->id,
-      'target' => $validated['target'],
-      'title' => $validated['title']
-    ]);
-
-    $app = 'Passenger'; // Default target
-    if ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
-      $this->notificationService->notifyUser(
-        $validated['user_id'],
-        $validated['title'],
-        $validated['body'],
-        $validated['data'] ?? [],
-        new \App\Events\SendPromotion($validated['title'], $validated['body'], $validated['data'] ?? [], $channel),
-        $app
-      );
-    } else {
-        // Handle batch broadcast if needed, though SendPromotion usually handles broadcasting
-        broadcast(new \App\Events\SendPromotion(
+      // Send via FCM
+      $fcmCount = 0;
+      if (!empty($tokens)) {
+        try {
+          $fcmResult = $fcmService->sendToTokens(
+            $tokens,
             $validated['title'],
             $validated['body'],
             $validated['data'] ?? [],
-            $channel
-        ))->toOthers();
-    }
+            $validated['high_priority'] ?? true
+          );
+          $fcmCount = count($tokens);
+          Log::info('Admin FCM broadcast sent', ['count' => $fcmCount, 'result' => $fcmResult]);
+        } catch (\Exception $e) {
+          Log::error('Admin FCM send failed', ['error' => $e->getMessage()]);
+        }
+      } else {
+        Log::info('Admin notification: no FCM tokens found', ['target' => $validated['target']]);
+      }
 
-    return response()->json(['success' => true, 'message' => 'Notification initialized via ' . $channel]);
+      // Also broadcast via WebSocket (Reverb) for users active in the app
+      broadcast(new \App\Events\SendPromotion(
+        $validated['title'],
+        $validated['body'],
+        $validated['data'] ?? [],
+        $channel
+      ))->toOthers();
+
+      Log::info('Admin notification sent', [
+        'admin_id' => optional($request->user())->id,
+        'target'   => $validated['target'],
+        'title'    => $validated['title'],
+        'fcm_sent' => $fcmCount,
+        'db_saved' => count($userIds),
+      ]);
+
+      return response()->json([
+        'success'   => true,
+        'message'   => 'Notification sent via FCM (' . $fcmCount . ' devices) + WebSocket',
+        'fcm_count' => $fcmCount,
+        'db_saved'  => count($userIds),
+      ]);
+    } catch (\Exception $e) {
+      Log::error('Admin notification send failed', ['error' => $e->getMessage()]);
+      return response()->json([
+        'success' => false,
+        'message' => 'Failed to send notification: ' . $e->getMessage(),
+      ], 500);
+    }
   }
 
   public function send02(Request $request, FcmService $fcmService)
