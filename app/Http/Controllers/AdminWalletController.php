@@ -180,7 +180,7 @@ class AdminWalletController extends Controller
       DB::beginTransaction();
 
       if ($request->hasFile('receipt')) {
-        $path = $request->file('receipt')->store('receipts/withdrawals', 'public');
+        $path = $request->file('receipt')->store('receipts/withdrawals');
         $transaction->receipt_path = $path;
       }
 

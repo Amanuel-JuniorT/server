@@ -37,7 +37,7 @@ class VehicleTypeController extends Controller
     ]);
 
     if ($request->hasFile('image')) {
-      $path = $request->file('image')->store('vehicle_types', 'public');
+      $path = $request->file('image')->store('vehicle_types');
       $validated['image_path'] = $path;
     }
 
@@ -70,9 +70,9 @@ class VehicleTypeController extends Controller
     if ($request->hasFile('image')) {
       // Delete old image if exists
       if ($vehicleType->image_path) {
-        Storage::disk('public')->delete($vehicleType->image_path);
+        Storage::delete($vehicleType->image_path);
       }
-      $path = $request->file('image')->store('vehicle_types', 'public');
+      $path = $request->file('image')->store('vehicle_types');
       $validated['image_path'] = $path;
     }
 
