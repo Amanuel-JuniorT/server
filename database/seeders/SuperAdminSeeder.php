@@ -42,10 +42,10 @@ class SuperAdminSeeder extends Seeder
         'password' => Hash::make($password),
         'role' => 'super_admin',
         'company_id' => null,
-        'email_verified_at' => null, // Require verification on first login as requested
+        'email_verified_at' => now(),
         'is_active' => true,
       ]);
-      $this->command->info("Super Admin '{$email}' created. Verification required on first login.");
+      $this->command->info("Super Admin '{$email}' created.");
     }
   }
 }
