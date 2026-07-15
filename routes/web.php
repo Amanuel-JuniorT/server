@@ -39,7 +39,7 @@ Route::get('admin/accept-invitation/{token}', [\App\Http\Controllers\Admin\Invit
 Route::post('admin/accept-invitation', [\App\Http\Controllers\Admin\InvitationController::class, 'accept'])->name('admin.invitation.process');
 
 // Super Admin routes
-Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdmin::class])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsSuperAdmin::class])->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('passengers', [AdminDashboardController::class, 'passengers'])->name('passengers');
     Route::get('drivers', [AdminDashboardController::class, 'driversAlt'])->name('drivers');
@@ -188,7 +188,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
 });
 
 // Company Admin routes
-Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsCompanyAdmin::class])->prefix('company-admin')->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\EnsureUserIsCompanyAdmin::class])->prefix('company-admin')->group(function () {
     Route::get('dashboard', [App\Http\Controllers\CompanyAdminController::class, 'dashboard'])->name('company-admin.dashboard');
     Route::get('employees', [App\Http\Controllers\CompanyAdminController::class, 'employees'])->name('company-admin.employees');
     Route::post('employees', [App\Http\Controllers\CompanyAdminController::class, 'addEmployee'])->name('company-admin.employees.add');
