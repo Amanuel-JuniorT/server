@@ -184,6 +184,7 @@ Route::get('/users/check-phone', function (Request $request) {
 // Authenticated Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('wallet/validate-recipient/{phone}', [WalletController::class, 'getReceiver']);
+    Route::get('wallet/get-receiver/{phone}', [WalletController::class, 'getReceiver']);
     Route::get('wallet', [WalletController::class, 'index']);
     Route::get('wallet/transactions', [WalletController::class, 'transactions']);
     Route::post('wallet/withdraw', [WalletController::class, 'withdraw'])->middleware('throttle:5,1');
