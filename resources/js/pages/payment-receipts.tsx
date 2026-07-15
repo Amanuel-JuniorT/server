@@ -644,7 +644,6 @@ export default function PaymentReceiptsPage() {
                                         </TableBody>
                                     </table>
                                 </div>
-                            )
                         ) : (
                             // Withdrawals Table
                             withdrawals.length === 0 ? (
