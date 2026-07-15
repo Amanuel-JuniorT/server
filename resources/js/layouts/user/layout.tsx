@@ -65,6 +65,11 @@ const driverNavItems: NavItem[] = [
         href: '/driver/schedule',
         icon: null,
     },
+    {
+        title: 'Wallet',
+        href: '/driver/wallet',
+        icon: null,
+    },
 ];
 
 interface UserLayoutProps extends PropsWithChildren {

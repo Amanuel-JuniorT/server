@@ -931,6 +931,45 @@ class AdminDashboardController extends Controller
         ]);
     }
 
+    public function driverWallet($id)
+    {
+        $user = User::with(['wallet.transactions' => function ($query) {
+            $query->orderBy('created_at', 'desc');
+        }])->findOrFail($id);
+
+        $wallet = $user->wallet;
+        $transactions = $wallet ? $wallet->transactions : collect();
+
+        // Calculate total earnings from completed rides
+        $totalEarned = \App\Models\Ride::where('driver_id', $user->id)
+            ->where('status', 'completed')
+            ->sum('price');
+
+        $data = [
+            'balance' => $wallet->balance ?? 0,
+            'totalEarned' => round($totalEarned, 2),
+            'lastWithdrawal' => $transactions->where('type', 'withdraw')->where('status', 'approved')->first()?->created_at?->format('Y-m-d') ?? 'N/A',
+            'transactions' => $transactions->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'amount' => $t->amount,
+                    'type' => $t->type,
+                    'status' => $t->status ?? 'approved',
+                    'date' => $t->created_at->format('Y-m-d'),
+                    'time' => $t->created_at->format('H:i'),
+                    'description' => $t->note ?? 'Transaction',
+                    'transactionId' => 'TXN-' . str_pad($t->id, 6, '0', STR_PAD_LEFT),
+                    'receipt_path' => $t->receipt_path ? \Storage::url($t->receipt_path) : null,
+                ];
+            }),
+        ];
+
+        return Inertia::render('driver/payments', [
+            'user_id' => $id,
+            'data' => $data
+        ]);
+    }
+
     public function passengerFavorites($id)
     {
         $user = User::with('favorites')->findOrFail($id);

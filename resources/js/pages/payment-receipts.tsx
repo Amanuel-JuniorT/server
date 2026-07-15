@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem, SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
-import { Check, ExternalLink, FileText, Loader2, X } from 'lucide-react';
+import { Check, ExternalLink, FileText, Loader2, X, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -41,6 +41,21 @@ interface PendingTopup {
     };
 }
 
+interface PendingWithdrawal {
+    id: number;
+    amount: number;
+    status: 'pending' | 'approved' | 'rejected';
+    note?: string;
+    created_at: string;
+    receipt_path: string | null;
+    user: {
+        id: number;
+        name: string;
+        email: string;
+        phone: string;
+    };
+}
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Payment Receipts', href: '/payment-receipts' },
@@ -49,27 +64,33 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function PaymentReceiptsPage() {
     const [receipts, setReceipts] = useState<PaymentReceipt[]>([]);
     const [topups, setTopups] = useState<PendingTopup[]>([]);
+    const [withdrawals, setWithdrawals] = useState<PendingWithdrawal[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'company' | 'wallet'>('company');
+    const [activeTab, setActiveTab] = useState<'company' | 'wallet' | 'withdrawals'>('company');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [companyStatusFilter, setCompanyStatusFilter] = useState<string>('pending');
+    const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<string>('pending');
     const [selectedReceipt, setSelectedReceipt] = useState<PaymentReceipt | null>(null);
     const [selectedTopup, setSelectedTopup] = useState<PendingTopup | null>(null);
+    const [selectedWithdrawal, setSelectedWithdrawal] = useState<PendingWithdrawal | null>(null);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [isApproveWithdrawalDialogOpen, setIsApproveWithdrawalDialogOpen] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [receiptFile, setReceiptFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const { pendingActions } = usePage<SharedData>().props;
 
-    // Get csrf token
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
     useEffect(() => {
         if (activeTab === 'company') {
             fetchPendingReceipts();
-        } else {
+        } else if (activeTab === 'wallet') {
             fetchPendingTopups();
+        } else if (activeTab === 'withdrawals') {
+            fetchPendingWithdrawals();
         }
-    }, [activeTab, statusFilter, companyStatusFilter]);
+    }, [activeTab, statusFilter, companyStatusFilter, withdrawalStatusFilter]);
 
     const fetchPendingReceipts = async () => {
         setIsLoading(true);
@@ -105,6 +126,25 @@ export default function PaymentReceiptsPage() {
         }
     };
 
+    const fetchPendingWithdrawals = async () => {
+        setIsLoading(true);
+        try {
+            let url = '/admin/wallet/withdrawals';
+            if (withdrawalStatusFilter !== 'all') {
+                url += `?status=${withdrawalStatusFilter}`;
+            }
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.success) {
+                setWithdrawals(data.data);
+            }
+        } catch (error) {
+            toast.error('Failed to load withdrawals');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleVerify = async (receiptId: number) => {
         if (!confirm('Are you sure you want to verify this payment receipt?')) return;
 
@@ -135,14 +175,15 @@ export default function PaymentReceiptsPage() {
     };
 
     const handleReject = async () => {
-        if (activeTab === 'company') {
-            if (!selectedReceipt || !rejectionReason.trim()) {
-                toast.error('Please provide a rejection reason');
-                return;
-            }
+        setIsProcessing(true);
+        try {
+            if (activeTab === 'company') {
+                if (!selectedReceipt || !rejectionReason.trim()) {
+                    toast.error('Please provide a rejection reason');
+                    setIsProcessing(false);
+                    return;
+                }
 
-            setIsProcessing(true);
-            try {
                 const res = await fetch(`/admin/payment-receipts/${selectedReceipt.id}/reject`, {
                     method: 'POST',
                     headers: {
@@ -153,7 +194,6 @@ export default function PaymentReceiptsPage() {
                 });
 
                 const data = await res.json();
-
                 if (data.success) {
                     toast.success('Receipt rejected');
                     setIsRejectDialogOpen(false);
@@ -164,20 +204,13 @@ export default function PaymentReceiptsPage() {
                 } else {
                     toast.error(data.message || 'Failed to reject receipt');
                 }
-            } catch (error) {
-                toast.error('An error occurred');
-            } finally {
-                setIsProcessing(false);
-            }
-        } else {
-            // Reject Topup
-            if (!selectedTopup || !rejectionReason.trim()) {
-                toast.error('Please provide a rejection reason');
-                return;
-            }
+            } else if (activeTab === 'wallet') {
+                if (!selectedTopup || !rejectionReason.trim()) {
+                    toast.error('Please provide a rejection reason');
+                    setIsProcessing(false);
+                    return;
+                }
 
-            setIsProcessing(true);
-            try {
                 const res = await fetch(`/admin/wallet/topups/${selectedTopup.id}/reject`, {
                     method: 'POST',
                     headers: {
@@ -188,7 +221,6 @@ export default function PaymentReceiptsPage() {
                 });
 
                 const data = await res.json();
-
                 if (data.success) {
                     toast.success('Top-up rejected');
                     setIsRejectDialogOpen(false);
@@ -199,15 +231,41 @@ export default function PaymentReceiptsPage() {
                 } else {
                     toast.error(data.message || 'Failed to reject top-up');
                 }
-            } catch (error) {
-                toast.error('An error occurred');
-            } finally {
-                setIsProcessing(false);
+            } else if (activeTab === 'withdrawals') {
+                if (!selectedWithdrawal || !rejectionReason.trim()) {
+                    toast.error('Please provide a rejection reason');
+                    setIsProcessing(false);
+                    return;
+                }
+
+                const res = await fetch(`/admin/wallet/withdrawals/${selectedWithdrawal.id}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({ reason: rejectionReason }),
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    toast.success('Withdrawal rejected');
+                    setIsRejectDialogOpen(false);
+                    setSelectedWithdrawal(null);
+                    setRejectionReason('');
+                    fetchPendingWithdrawals();
+                    router.reload({ only: ['pendingActions'] });
+                } else {
+                    toast.error(data.message || 'Failed to reject withdrawal');
+                }
             }
+        } catch (error) {
+            toast.error('An error occurred');
+        } finally {
+            setIsProcessing(false);
         }
     };
 
-    // New handler for Topup Verification
     const handleVerifyTopup = async (id: number) => {
         if (!confirm('Are you sure you want to verify this top-up? Wallet balance will be updated instantly.')) return;
 
@@ -222,13 +280,51 @@ export default function PaymentReceiptsPage() {
             });
 
             const data = await res.json();
-
             if (data.success) {
                 toast.success('Top-up verified successfully');
                 fetchPendingTopups();
                 router.reload({ only: ['pendingActions'] });
             } else {
                 toast.error(data.message || 'Failed to verify top-up');
+            }
+        } catch (error) {
+            toast.error('An error occurred');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleVerifyWithdrawal = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedWithdrawal) return;
+        if (!receiptFile) {
+            toast.error('Payment receipt is required');
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            const formData = new FormData();
+            formData.append('receipt', receiptFile);
+
+            const res = await fetch(`/admin/wallet/withdrawals/${selectedWithdrawal.id}/verify`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: formData,
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Withdrawal verified and receipt attached');
+                setIsApproveWithdrawalDialogOpen(false);
+                setSelectedWithdrawal(null);
+                setReceiptFile(null);
+                fetchPendingWithdrawals();
+                router.reload({ only: ['pendingActions'] });
+            } else {
+                toast.error(data.message || 'Failed to verify withdrawal');
             }
         } catch (error) {
             toast.error('An error occurred');
@@ -259,13 +355,13 @@ export default function PaymentReceiptsPage() {
             <div className="space-y-6">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Payment Receipts</h1>
-                    <p className="text-muted-foreground">Review and verify company payment receipts</p>
+                    <p className="text-muted-foreground">Review and verify company payment receipts and user wallets</p>
                 </div>
 
-                <div className="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-                    <div className="flex gap-4 border-b">
+                <div className="mb-4 flex flex-col items-start justify-between gap-4 border-b pb-1 md:flex-row md:items-center">
+                    <div className="flex gap-4">
                         <button
-                            className={`relative px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'company' ? 'border-primary text-primary border-b-2' : 'text-muted-foreground hover:text-primary'}`}
+                            className={`relative px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'company' ? 'border-primary text-primary border-b-2 font-semibold' : 'text-muted-foreground hover:text-primary'}`}
                             onClick={() => setActiveTab('company')}
                         >
                             Company Payment Receipts
@@ -277,7 +373,7 @@ export default function PaymentReceiptsPage() {
                             )}
                         </button>
                         <button
-                            className={`relative px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'wallet' ? 'border-primary text-primary border-b-2' : 'text-muted-foreground hover:text-primary'}`}
+                            className={`relative px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'wallet' ? 'border-primary text-primary border-b-2 font-semibold' : 'text-muted-foreground hover:text-primary'}`}
                             onClick={() => setActiveTab('wallet')}
                         >
                             User Wallet Top-ups
@@ -288,13 +384,23 @@ export default function PaymentReceiptsPage() {
                                 </span>
                             )}
                         </button>
+                        <button
+                            className={`relative px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'withdrawals' ? 'border-primary text-primary border-b-2 font-semibold' : 'text-muted-foreground hover:text-primary'}`}
+                            onClick={() => setActiveTab('withdrawals')}
+                        >
+                            User Wallet Withdrawals
+                            {(pendingActions?.wallet_withdrawals ?? 0) > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                                </span>
+                            )}
+                        </button>
                     </div>
- 
+
                     {activeTab === 'company' ? (
                         <div className="flex items-center gap-2">
-                            <Label htmlFor="company-status-filter" className="text-sm">
-                                Status:
-                            </Label>
+                            <Label htmlFor="company-status-filter" className="text-sm">Status:</Label>
                             <select
                                 id="company-status-filter"
                                 className="border-input bg-background focus-visible:ring-ring h-9 w-[150px] rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
@@ -307,11 +413,9 @@ export default function PaymentReceiptsPage() {
                                 <option value="rejected">Rejected</option>
                             </select>
                         </div>
-                    ) : (
+                    ) : activeTab === 'wallet' ? (
                         <div className="flex items-center gap-2">
-                            <Label htmlFor="status-filter" className="text-sm">
-                                Status:
-                            </Label>
+                            <Label htmlFor="status-filter" className="text-sm">Status:</Label>
                             <select
                                 id="status-filter"
                                 className="border-input bg-background focus-visible:ring-ring h-9 w-[150px] rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
@@ -324,14 +428,39 @@ export default function PaymentReceiptsPage() {
                                 <option value="rejected">Rejected</option>
                             </select>
                         </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Label htmlFor="withdrawal-status-filter" className="text-sm">Status:</Label>
+                            <select
+                                id="withdrawal-status-filter"
+                                className="border-input bg-background focus-visible:ring-ring h-9 w-[150px] rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                                value={withdrawalStatusFilter}
+                                onChange={(e) => setWithdrawalStatusFilter(e.target.value)}
+                            >
+                                <option value="all">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
                     )}
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>{activeTab === 'company' ? 'Pending Company Payments' : 'Wallet Top-ups'}</CardTitle>
+                        <CardTitle>
+                            {activeTab === 'company' 
+                                ? 'Pending Company Payments' 
+                                : activeTab === 'wallet' 
+                                  ? 'Wallet Top-ups' 
+                                  : 'Wallet Payout Withdrawals'}
+                        </CardTitle>
                         <CardDescription>
-                            {activeTab === 'company' ? 'Payment receipts awaiting admin verification' : 'User wallet top-up history and requests'}
+                            {activeTab === 'company' 
+                                ? 'Payment receipts awaiting admin verification' 
+                                : activeTab === 'wallet' 
+                                  ? 'User wallet top-up history and requests' 
+                                  : 'User payouts awaiting admin transfer verification receipt'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -340,7 +469,6 @@ export default function PaymentReceiptsPage() {
                                 <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
                             </div>
                         ) : activeTab === 'company' ? (
-                            // Existing Company Receipts Table
                             receipts.length === 0 ? (
                                 <div className="text-muted-foreground py-8 text-center">No pending payment receipts</div>
                             ) : (
@@ -425,141 +553,317 @@ export default function PaymentReceiptsPage() {
                                     </table>
                                 </div>
                             )
-                        ) : // New User Top-ups Table
-                        topups.length === 0 ? (
-                            <div className="text-muted-foreground py-8 text-center">No wallet top-ups found</div>
-                        ) : (
-                            <div className="relative max-h-[65vh] overflow-y-auto rounded-md border">
-                                <table className="w-full caption-bottom border-collapse text-sm">
-                                    <TableHeader className="bg-card sticky top-0 z-10">
-                                        <TableRow>
-                                            <TableHead>User</TableHead>
-                                            <TableHead>Amount</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Submitted</TableHead>
-                                            <TableHead>Receipt</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {topups.map((topup) => (
-                                            <TableRow key={topup.id}>
-                                                <TableCell>
-                                                    <div className="font-medium">{topup.user.name}</div>
-                                                    <div className="text-muted-foreground text-xs">{topup.user.phone}</div>
-                                                </TableCell>
-                                                <TableCell className="font-semibold">{formatCurrency(topup.amount)}</TableCell>
-                                                <TableCell>
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                            topup.status === 'approved'
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : topup.status === 'rejected'
-                                                                  ? 'bg-red-100 text-red-800'
-                                                                  : 'bg-yellow-100 text-yellow-800'
-                                                        }`}
-                                                    >
-                                                        {topup.status.charAt(0).toUpperCase() + topup.status.slice(1)}
-                                                    </span>
-                                                    {topup.status === 'rejected' && topup.note && (
-                                                        <div className="mt-1 max-w-[200px] truncate text-xs text-red-600" title={topup.note}>
-                                                            {topup.note}
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>{formatDate(topup.created_at)}</TableCell>
-                                                <TableCell>
-                                                    {topup.receipt_path ? (
-                                                        <a
-                                                            href={topup.receipt_path}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                                                        >
-                                                            <FileText className="h-4 w-4" />
-                                                            View
-                                                            <ExternalLink className="h-3 w-3" />
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-muted-foreground text-sm">No Receipt</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {topup.status === 'pending' && (
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="default"
-                                                                onClick={() => handleVerifyTopup(topup.id)}
-                                                                disabled={isProcessing}
-                                                            >
-                                                                <Check className="mr-1 h-4 w-4" />
-                                                                Verify
-                                                            </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="destructive"
-                                                                onClick={() => {
-                                                                    setSelectedTopup(topup);
-                                                                    setIsRejectDialogOpen(true);
-                                                                }}
-                                                                disabled={isProcessing}
-                                                            >
-                                                                <X className="mr-1 h-4 w-4" />
-                                                                Reject
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </TableCell>
+                        ) : activeTab === 'wallet' ? (
+                            topups.length === 0 ? (
+                                <div className="text-muted-foreground py-8 text-center">No wallet top-ups found</div>
+                            ) : (
+                                <div className="relative max-h-[65vh] overflow-y-auto rounded-md border">
+                                    <table className="w-full caption-bottom border-collapse text-sm">
+                                        <TableHeader className="bg-card sticky top-0 z-10">
+                                            <TableRow>
+                                                <TableHead>User</TableHead>
+                                                <TableHead>Amount</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Submitted</TableHead>
+                                                <TableHead>Receipt</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {topups.map((topup) => (
+                                                <TableRow key={topup.id}>
+                                                    <TableCell>
+                                                        <div className="font-medium">{topup.user.name}</div>
+                                                        <div className="text-muted-foreground text-xs">{topup.user.phone}</div>
+                                                    </TableCell>
+                                                    <TableCell className="font-semibold">{formatCurrency(topup.amount)}</TableCell>
+                                                    <TableCell>
+                                                        <span
+                                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                                topup.status === 'approved'
+                                                                    ? 'bg-green-100 text-green-800'
+                                                                    : topup.status === 'rejected'
+                                                                      ? 'bg-red-100 text-red-800'
+                                                                      : 'bg-yellow-100 text-yellow-800'
+                                                            }`}
+                                                        >
+                                                            {topup.status.charAt(0).toUpperCase() + topup.status.slice(1)}
+                                                        </span>
+                                                        {topup.status === 'rejected' && topup.note && (
+                                                            <div className="mt-1 max-w-[200px] truncate text-xs text-red-600" title={topup.note}>
+                                                                {topup.note}
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>{formatDate(topup.created_at)}</TableCell>
+                                                    <TableCell>
+                                                        {topup.receipt_path ? (
+                                                            <a
+                                                                href={topup.receipt_path}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                                                            >
+                                                                <FileText className="h-4 w-4" />
+                                                                View
+                                                                <ExternalLink className="h-3 w-3" />
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-sm">No Receipt</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {topup.status === 'pending' && (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    onClick={() => handleVerifyTopup(topup.id)}
+                                                                    disabled={isProcessing}
+                                                                >
+                                                                    <Check className="mr-1 h-4 w-4" />
+                                                                    Verify
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="destructive"
+                                                                    onClick={() => {
+                                                                        setSelectedTopup(topup);
+                                                                        setIsRejectDialogOpen(true);
+                                                                    }}
+                                                                    disabled={isProcessing}
+                                                                    >
+                                                                    <X className="mr-1 h-4 w-4" />
+                                                                    Reject
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </table>
+                                </div>
+                            )
+                        ) : (
+                            // Withdrawals Table
+                            withdrawals.length === 0 ? (
+                                <div className="text-muted-foreground py-8 text-center">No wallet withdrawal payouts found</div>
+                            ) : (
+                                <div className="relative max-h-[65vh] overflow-y-auto rounded-md border">
+                                    <table className="w-full caption-bottom border-collapse text-sm">
+                                        <TableHeader className="bg-card sticky top-0 z-10">
+                                            <TableRow>
+                                                <TableHead>User</TableHead>
+                                                <TableHead>Amount Requested</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Requested</TableHead>
+                                                <TableHead>Payout Destination</TableHead>
+                                                <TableHead>Receipt</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {withdrawals.map((withdrawal) => (
+                                                <TableRow key={withdrawal.id}>
+                                                    <TableCell>
+                                                        <div className="font-medium">{withdrawal.user.name}</div>
+                                                        <div className="text-muted-foreground text-xs">{withdrawal.user.phone}</div>
+                                                    </TableCell>
+                                                    <TableCell className="font-semibold text-red-600">
+                                                        {formatCurrency(Math.abs(withdrawal.amount))}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <span
+                                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                                withdrawal.status === 'approved'
+                                                                    ? 'bg-green-100 text-green-800'
+                                                                    : withdrawal.status === 'rejected'
+                                                                      ? 'bg-red-100 text-red-800'
+                                                                      : 'bg-yellow-100 text-yellow-800'
+                                                            }`}
+                                                        >
+                                                            {withdrawal.status.charAt(0).toUpperCase() + withdrawal.status.slice(1)}
+                                                        </span>
+                                                        {withdrawal.status === 'rejected' && withdrawal.note && (
+                                                            <div className="mt-1 max-w-[200px] truncate text-xs text-red-600" title={withdrawal.note}>
+                                                                {withdrawal.note}
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>{formatDate(withdrawal.created_at)}</TableCell>
+                                                    <TableCell>
+                                                        <div className="text-xs max-w-[250px] whitespace-pre-line" title={withdrawal.note}>
+                                                            {withdrawal.note}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {withdrawal.receipt_path ? (
+                                                            <a
+                                                                href={withdrawal.receipt_path}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                                                            >
+                                                                <FileText className="h-4 w-4" />
+                                                                View
+                                                                <ExternalLink className="h-3 w-3" />
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-sm">No Receipt</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        {withdrawal.status === 'pending' && (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    onClick={() => {
+                                                                        setSelectedWithdrawal(withdrawal);
+                                                                        setIsApproveWithdrawalDialogOpen(true);
+                                                                    }}
+                                                                    disabled={isProcessing}
+                                                                >
+                                                                    <Check className="mr-1 h-4 w-4" />
+                                                                    Approve
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="destructive"
+                                                                    onClick={() => {
+                                                                        setSelectedWithdrawal(withdrawal);
+                                                                        setIsRejectDialogOpen(true);
+                                                                    }}
+                                                                    disabled={isProcessing}
+                                                                >
+                                                                    <X className="mr-1 h-4 w-4" />
+                                                                    Reject
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
 
-            <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Reject Payment Receipt</DialogTitle>
-                        <DialogDescription>Please provide a reason for rejecting this payment receipt.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="rejection_reason">Rejection Reason</Label>
-                            <Textarea
-                                id="rejection_reason"
-                                value={rejectionReason}
-                                onChange={(e) => setRejectionReason(e.target.value)}
-                                placeholder="Explain why this receipt is being rejected..."
-                                rows={4}
-                                required
-                            />
+                {/* Reject dialog */}
+                <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Reject Request</DialogTitle>
+                            <DialogDescription>
+                                Please provide a reason for rejecting this wallet transaction. If it is a withdrawal, funds will be automatically refunded to the user's wallet.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="rejection_reason">Rejection Reason</Label>
+                                <Textarea
+                                    id="rejection_reason"
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    placeholder="Explain why this request is being rejected..."
+                                    rows={4}
+                                    required
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                                setIsRejectDialogOpen(false);
-                                setSelectedReceipt(null);
-                                setSelectedTopup(null);
-                                setRejectionReason('');
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="button" variant="destructive" onClick={handleReject} disabled={isProcessing || !rejectionReason.trim()}>
-                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Reject Receipt
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsRejectDialogOpen(false);
+                                    setSelectedReceipt(null);
+                                    setSelectedTopup(null);
+                                    setSelectedWithdrawal(null);
+                                    setRejectionReason('');
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="button" variant="destructive" onClick={handleReject} disabled={isProcessing || !rejectionReason.trim()}>
+                                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Reject Request
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Approve Withdrawal Dialog (Requires upload) */}
+                <Dialog open={isApproveWithdrawalDialogOpen} onOpenChange={setIsApproveWithdrawalDialogOpen}>
+                    <DialogContent>
+                        <form onSubmit={handleVerifyWithdrawal}>
+                            <DialogHeader>
+                                <DialogTitle>Approve Payout Withdrawal</DialogTitle>
+                                <DialogDescription>
+                                    Please transfer {selectedWithdrawal ? formatCurrency(Math.abs(selectedWithdrawal.amount)) : ''} to the user using the details provided below, then attach the payment receipt screenshot.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                {selectedWithdrawal && (
+                                    <div className="rounded-md bg-muted p-3 text-sm">
+                                        <p className="font-semibold mb-1">Transfer Details:</p>
+                                        <p className="whitespace-pre-line text-muted-foreground">{selectedWithdrawal.note}</p>
+                                    </div>
+                                )}
+                                <div className="grid gap-2">
+                                    <Label htmlFor="receipt_file">Payment Payout Receipt (Image)</Label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            id="receipt_file"
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    setReceiptFile(e.target.files[0]);
+                                                }
+                                            }}
+                                            required
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => document.getElementById('receipt_file')?.click()}
+                                        >
+                                            <Upload className="mr-2 h-4 w-4" />
+                                            {receiptFile ? 'Change Receipt' : 'Upload Receipt'}
+                                        </Button>
+                                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                            {receiptFile ? receiptFile.name : 'No file selected'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsApproveWithdrawalDialogOpen(false);
+                                        setSelectedWithdrawal(null);
+                                        setReceiptFile(null);
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isProcessing || !receiptFile}>
+                                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Approve & Complete
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </AppLayout>
     );
 }

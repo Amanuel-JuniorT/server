@@ -38,23 +38,44 @@ class AdminNotificationController extends Controller
         $channel = 'drivers_broadcast';
       }
 
-      // Resolve FCM tokens and user IDs from DeviceToken table
+      // Resolve FCM tokens and user IDs from DeviceToken table (case-insensitive)
       $tokens = [];
       $userIds = [];
-      $appTarget = ($validated['target'] === 'all_drivers') ? 'Driver' : 'Passenger';
 
       if ($validated['target'] === 'all_passengers') {
-        $rows = DeviceToken::where('app', 'Passenger')->get();
+        $rows = DeviceToken::whereRaw('LOWER(app) = ?', ['passenger'])->get();
         $tokens = $rows->pluck('token')->filter()->unique()->values()->all();
         $userIds = $rows->pluck('user_id')->unique()->values()->all();
+        
+        // Fallback to user-table fcm_token
+        if (empty($tokens)) {
+            $users = \App\Models\User::where('role', 'passenger')->whereNotNull('fcm_token')->get();
+            $tokens = $users->pluck('fcm_token')->filter()->unique()->values()->all();
+            $userIds = array_unique(array_merge($userIds, $users->pluck('id')->all()));
+        }
       } elseif ($validated['target'] === 'all_drivers') {
-        $rows = DeviceToken::where('app', 'Driver')->get();
+        $rows = DeviceToken::whereRaw('LOWER(app) = ?', ['driver'])->get();
         $tokens = $rows->pluck('token')->filter()->unique()->values()->all();
         $userIds = $rows->pluck('user_id')->unique()->values()->all();
+        
+        // Fallback to user-table fcm_token
+        if (empty($tokens)) {
+            $users = \App\Models\User::where('role', 'driver')->whereNotNull('fcm_token')->get();
+            $tokens = $users->pluck('fcm_token')->filter()->unique()->values()->all();
+            $userIds = array_unique(array_merge($userIds, $users->pluck('id')->all()));
+        }
       } elseif ($validated['target'] === 'user_id' && !empty($validated['user_id'])) {
         $rows = DeviceToken::where('user_id', $validated['user_id'])->get();
         $tokens = $rows->pluck('token')->filter()->unique()->values()->all();
         $userIds = [$validated['user_id']];
+        
+        // Fallback to user-table fcm_token
+        if (empty($tokens)) {
+            $user = \App\Models\User::find($validated['user_id']);
+            if ($user && $user->fcm_token) {
+                $tokens = [$user->fcm_token];
+            }
+        }
       } elseif ($validated['target'] === 'tokens' && !empty($validated['tokens'])) {
         $tokens = array_values(array_unique(array_filter($validated['tokens'])));
       }

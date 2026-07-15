@@ -1,187 +1,112 @@
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { CreditCard, Download, History, Plus, Wallet } from 'lucide-react';
+import { CreditCard, History, Wallet, Eye } from 'lucide-react';
 
 import HeadingSmall from '@/components/heading-small';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import UserLayout from '@/layouts/user/layout';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Payments',
-        href: '/driver/payments',
+        title: 'Drivers',
+        href: '/admin/drivers',
+    },
+    {
+        title: 'Wallet',
+        href: '#',
     },
 ];
 
-// Mock data - replace with actual data from your backend
-const mockPayments = [
-    {
-        id: 1,
-        amount: 150,
-        method: 'credit_card',
-        status: 'completed',
-        date: '2024-01-15',
-        time: '14:30',
-        description: 'Ride from Bole to Kazanchis',
-        transactionId: 'TXN-001234',
-    },
-    {
-        id: 2,
-        amount: 120,
-        method: 'wallet',
-        status: 'completed',
-        date: '2024-01-10',
-        time: '09:15',
-        description: 'Ride from Kazanchis to Bole',
-        transactionId: 'TXN-001235',
-    },
-    {
-        id: 3,
-        amount: 200,
-        method: 'cash',
-        status: 'pending',
-        date: '2024-01-08',
-        time: '16:45',
-        description: 'Ride from Meskel Square to Piassa',
-        transactionId: 'TXN-001236',
-    },
-];
+interface Transaction {
+    id: number;
+    amount: number;
+    type: string;
+    status: string;
+    date: string;
+    time: string;
+    description: string;
+    transactionId: string;
+    receipt_path: string | null;
+}
 
-const mockWallet = {
-    balance: 450,
-    currency: 'ETB',
-    lastRecharge: '2024-01-10',
-    totalSpent: 3240,
+interface WalletData {
+    balance: number;
+    totalEarned: number;
+    lastWithdrawal: string;
+    transactions: Transaction[];
+}
+
+interface DriverPaymentsProps {
+    user_id: number;
+    data: WalletData;
+}
+
+const getTransactionColor = (amount: number, type: string) => {
+    if (type === 'withdraw') return 'text-red-600 dark:text-red-400';
+    if (amount > 0) return 'text-green-600 dark:text-green-400';
+    return 'text-foreground';
 };
 
-const getMethodIcon = (method: string) => {
-    switch (method) {
-        case 'credit_card':
-            return <CreditCard className="h-5 w-5" />;
-        case 'wallet':
-            return <Wallet className="h-5 w-5" />;
-        case 'cash':
-            return <Wallet className="h-5 w-5" />;
-        default:
-            return <CreditCard className="h-5 w-5" />;
-    }
-};
-
-const getMethodText = (method: string) => {
-    return method.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-};
-
-const getStatusColor = (status: string) => {
+const getStatusBadge = (status: string) => {
     switch (status) {
+        case 'approved':
         case 'completed':
-            return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+            return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Approved</Badge>;
         case 'pending':
-            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'failed':
-            return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+            return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">Pending</Badge>;
+        case 'rejected':
+            return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">Rejected</Badge>;
         default:
-            return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+            return <Badge variant="secondary">{status}</Badge>;
     }
 };
 
-export default function UserPayments() {
+export default function DriverPayments({ user_id, data }: DriverPaymentsProps) {
+    const { balance, totalEarned, lastWithdrawal, transactions } = data;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Payments" />
+            <Head title="Driver Wallet" />
 
-            <UserLayout>
+            <UserLayout role="driver" userId={user_id}>
                 <div className="space-y-6">
-                    <HeadingSmall title="Payments & Wallet" description="Manage your payment methods and view transaction history" />
+                    <HeadingSmall title="Driver Wallet" description="View real-time balance, earnings, and withdrawal history" />
 
-                    {/* Wallet Overview */}
+                    {/* Stats Overview */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center space-x-2">
-                                    <Wallet className="h-5 w-5 text-blue-600" />
-                                    <div>
-                                        <p className="text-2xl font-bold">{mockWallet.balance} ETB</p>
-                                    </div>
-                                </div>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Wallet Balance</CardTitle>
+                                <Wallet className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{balance.toLocaleString()} ETB</div>
+                                <p className="text-xs text-muted-foreground">Current spendable/withdrawable amount</p>
                             </CardContent>
                         </Card>
                         <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center space-x-2">
-                                    <History className="h-5 w-5 text-green-600" />
-                                    <div>
-                                        <p className="text-2xl font-bold">{mockWallet.totalSpent} ETB</p>
-                                    </div>
-                                </div>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Ride Earnings</CardTitle>
+                                <History className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{totalEarned.toLocaleString()} ETB</div>
+                                <p className="text-xs text-muted-foreground">Cumulative ride values completed</p>
                             </CardContent>
                         </Card>
                         <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center space-x-2">
-                                    <CreditCard className="h-5 w-5 text-purple-600" />
-                                    <div>
-                                        <p className="text-muted-foreground text-sm font-medium">Last Recharge</p>
-                                        <p className="text-sm font-bold">{mockWallet.lastRecharge}</p>
-                                    </div>
-                                </div>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Last Withdrawal</CardTitle>
+                                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-sm leading-8">{lastWithdrawal}</div>
+                                <p className="text-xs text-muted-foreground">Date of last approved withdrawal payout</p>
                             </CardContent>
                         </Card>
                     </div>
-
-                    {/* Quick Actions */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Quick Actions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-wrap gap-3">
-                            <Button className="flex items-center space-x-2">
-                                <Plus className="h-4 w-4" />
-                                <span>Add Money to Wallet</span>
-                            </Button>
-                            <Button variant="outline" className="flex items-center space-x-2">
-                                <CreditCard className="h-4 w-4" />
-                                <span>Add Payment Method</span>
-                            </Button>
-                            <Button variant="outline" className="flex items-center space-x-2">
-                                <Download className="h-4 w-4" />
-                                <span>Download Statement</span>
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    {/* Payment Methods */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Payment Methods</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between rounded-lg border p-3">
-                                    <div className="flex items-center space-x-3">
-                                        <CreditCard className="h-6 w-6 text-blue-600" />
-                                        <div>
-                                            <p className="font-medium">Visa ending in 1234</p>
-                                            <p className="text-muted-foreground text-sm">Expires 12/25</p>
-                                        </div>
-                                    </div>
-                                    <Badge variant="secondary">Default</Badge>
-                                </div>
-                                <div className="flex items-center justify-between rounded-lg border p-3">
-                                    <div className="flex items-center space-x-3">
-                                        <Wallet className="h-6 w-6 text-green-600" />
-                                        <div>
-                                            <p className="font-medium">Wallet Balance</p>
-                                            <p className="text-muted-foreground text-sm">{mockWallet.balance} ETB available</p>
-                                        </div>
-                                    </div>
-                                    <Badge variant="outline">Active</Badge>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
 
                     {/* Transaction History */}
                     <Card>
@@ -189,29 +114,50 @@ export default function UserPayments() {
                             <CardTitle>Transaction History</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {mockPayments.map((payment) => (
-                                    <div key={payment.id} className="rounded-lg border p-4 hover:bg-gray-50 dark:hover:bg-gray-900">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="rounded-lg bg-gray-100 p-2 dark:bg-gray-800">{getMethodIcon(payment.method)}</div>
-                                                <div>
-                                                    <p className="font-medium">{payment.description}</p>
-                                                    <p className="text-muted-foreground text-sm">
-                                                        {payment.date} at {payment.time}
+                            {transactions.length === 0 ? (
+                                <div className="py-8 text-center text-muted-foreground text-sm">No transaction records found for this driver.</div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {transactions.map((t) => (
+                                        <div key={t.id} className="rounded-lg border p-4 hover:bg-muted/50 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="rounded-lg bg-muted p-2">
+                                                        <Wallet className="h-5 w-5" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium text-sm">{t.description}</p>
+                                                        <p className="text-muted-foreground text-xs">
+                                                            {t.date} at {t.time}
+                                                        </p>
+                                                        <p className="text-muted-foreground text-xs">ID: {t.transactionId}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right flex flex-col items-end space-y-1">
+                                                    <p className={`text-lg font-bold ${getTransactionColor(t.amount, t.type)}`}>
+                                                        {t.amount > 0 ? '+' : ''}{t.amount.toLocaleString()} ETB
                                                     </p>
-                                                    <p className="text-muted-foreground text-xs">ID: {payment.transactionId}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        {t.receipt_path && (
+                                                            <a 
+                                                                href={t.receipt_path} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                                                            >
+                                                                <Eye className="h-3 w-3" />
+                                                                Receipt
+                                                            </a>
+                                                        )}
+                                                        {getStatusBadge(t.status)}
+                                                    </div>
+                                                    <p className="text-muted-foreground text-xs capitalize">{t.type}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-lg font-bold">{Math.abs(payment.amount)} ETB</p>
-                                                <Badge className={getStatusColor(payment.status)}>{payment.status}</Badge>
-                                                <p className="text-muted-foreground mt-1 text-xs">{getMethodText(payment.method)}</p>
-                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

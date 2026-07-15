@@ -25,7 +25,12 @@ class FcmTokenController extends Controller
 
     // Default platform and app if not provided (for driver app compatibility)
     $platform = $request->input('platform', 'android');
-    $app = $request->input('app', 'Driver');
+    $appInput = $request->input('app', 'Driver');
+    // Normalize to PascalCase: 'driver' -> 'Driver', 'passenger' -> 'Passenger'
+    $app = ucfirst(strtolower($appInput));
+    if (!in_array($app, ['Driver', 'Passenger'])) {
+        $app = 'Driver';
+    }
 
     $validated = [
       'token' => $fcmToken,

@@ -80,6 +80,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureUserIsSuperAdm
     Route::get('driver/earnings/{id}', [AdminDashboardController::class, 'driverEarnings'])->name('driver.earnings');
     Route::get('driver/vehicle/{id}', [AdminDashboardController::class, 'driverVehicle'])->name('driver.vehicle');
     Route::get('driver/schedule/{id}', [AdminDashboardController::class, 'driverSchedule'])->name('driver.schedule');
+    Route::get('driver/wallet/{id}', [AdminDashboardController::class, 'driverWallet'])->name('driver.wallet');
 
     Route::get('driver/location/{id}', [AdminDashboardController::class, 'driverLocation'])->name('driver.location');
 

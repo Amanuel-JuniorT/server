@@ -143,6 +143,7 @@ class AdminWalletController extends Controller
             'status' => $transaction->status,
             'note' => $transaction->note,
             'created_at' => $transaction->created_at,
+            'receipt_path' => $transaction->receipt_path ? \Storage::url($transaction->receipt_path) : null,
             'user' => $transaction->wallet->user,
           ];
         });
@@ -160,7 +161,7 @@ class AdminWalletController extends Controller
     }
   }
 
-  public function verifyWithdrawal($id)
+  public function verifyWithdrawal(Request $request, $id)
   {
     try {
       $transaction = Transaction::findOrFail($id);
@@ -172,7 +173,16 @@ class AdminWalletController extends Controller
         ], 400);
       }
 
+      $request->validate([
+        'receipt' => 'required|file|image|max:4096',
+      ]);
+
       DB::beginTransaction();
+
+      if ($request->hasFile('receipt')) {
+        $path = $request->file('receipt')->store('receipts/withdrawals', 'public');
+        $transaction->receipt_path = $path;
+      }
 
       // Update transaction status
       $transaction->status = 'approved';
@@ -193,7 +203,7 @@ class AdminWalletController extends Controller
       Log::error('Error verifying withdrawal: ' . $e->getMessage());
       return response()->json([
         'success' => false,
-        'message' => 'Failed to verify withdrawal'
+        'message' => 'Failed to verify withdrawal: ' . $e->getMessage()
       ], 500);
     }
   }

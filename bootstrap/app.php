@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'admin/wallet/topups/*/verify',
             'admin/wallet/topups/*/reject',
+            'admin/wallet/withdrawals/*/verify',
+            'admin/wallet/withdrawals/*/reject',
             'admin/payment-receipts/*/verify',
             'admin/payment-receipts/*/reject',
             'admin/notifications/send',
