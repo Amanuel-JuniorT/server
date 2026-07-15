@@ -760,7 +760,7 @@ export default function PaymentReceiptsPage() {
                         <DialogHeader>
                             <DialogTitle>Reject Request</DialogTitle>
                             <DialogDescription>
-                                Please provide a reason for rejecting this wallet transaction. If it is a withdrawal, funds will be automatically refunded to the user's wallet.
+                                Please provide a reason for rejecting this wallet transaction. If it is a withdrawal, funds will be automatically refunded to the user&apos;s wallet.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -864,7 +864,6 @@ export default function PaymentReceiptsPage() {
                         </form>
                     </DialogContent>
                 </Dialog>
-            </div>
-        </AppLayout>
+            </AppLayout>
     );
 }
